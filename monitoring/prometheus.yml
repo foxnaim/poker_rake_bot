@@ -1,0 +1,41 @@
+global:
+  scrape_interval: 15s  # Собираем метрики каждые 15 секунд
+  evaluation_interval: 15s  # Оцениваем правила каждые 15 секунд
+
+# Alertmanager configuration (опционально)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # - alertmanager:9093
+
+# Правила для алертов (опционально)
+rule_files:
+  # - "alert_rules.yml"
+
+# Источники метрик
+scrape_configs:
+  # Poker Bot API
+  - job_name: 'poker_bot_api'
+    static_configs:
+      - targets: ['poker_bot_api:8000']
+        labels:
+          service: 'poker_bot'
+          environment: 'development'
+    metrics_path: '/metrics'
+    scrape_interval: 10s  # Для API собираем чаще
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # PostgreSQL Exporter (если добавите)
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres_exporter:9187']
+
+  # Redis Exporter (если добавите)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis_exporter:9121']

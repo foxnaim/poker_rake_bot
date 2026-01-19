@@ -1,0 +1,168 @@
+{
+  "dashboard": {
+    "title": "Poker Rake Bot Dashboard",
+    "theme": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Latency",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, http_request_duration_seconds_bucket{job=\"poker_bot_api\"})",
+            "legendFormat": "P95",
+            "color": "#66FCF1"
+          },
+          {
+            "expr": "histogram_quantile(0.99, http_request_duration_seconds_bucket{job=\"poker_bot_api\"})",
+            "legendFormat": "P99",
+            "color": "#C5C6C7"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "ms",
+            "label": "Latency"
+          }
+        ],
+        "colors": ["#66FCF1", "#C5C6C7"]
+      },
+      {
+        "id": 2,
+        "title": "Bot Statistics",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "bot_vpip{limit_type=\"NL10\"}",
+            "legendFormat": "VPIP",
+            "color": "#66FCF1"
+          },
+          {
+            "expr": "bot_pfr{limit_type=\"NL10\"}",
+            "legendFormat": "PFR",
+            "color": "#C5C6C7"
+          },
+          {
+            "expr": "bot_aggression_factor{limit_type=\"NL10\"}",
+            "legendFormat": "AF",
+            "color": "#1F2833"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "Percentage"
+          }
+        ],
+        "colors": ["#66FCF1", "#C5C6C7", "#1F2833"]
+      },
+      {
+        "id": 3,
+        "title": "Winrate (bb/100)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "bot_winrate_bb_100{limit_type=\"NL10\"}",
+            "legendFormat": "NL10",
+            "color": "#66FCF1"
+          },
+          {
+            "expr": "bot_winrate_bb_100{limit_type=\"NL50\"}",
+            "legendFormat": "NL50",
+            "color": "#C5C6C7"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "bb/100"
+          }
+        ],
+        "colors": ["#66FCF1", "#C5C6C7"]
+      },
+      {
+        "id": 4,
+        "title": "Rake per Hour",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "bot_rake_per_hour{limit_type=\"NL10\"}",
+            "legendFormat": "NL10",
+            "color": "#66FCF1"
+          },
+          {
+            "expr": "bot_rake_per_hour{limit_type=\"NL50\"}",
+            "legendFormat": "NL50",
+            "color": "#C5C6C7"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "currency",
+            "label": "Rake/hour"
+          }
+        ],
+        "colors": ["#66FCF1", "#C5C6C7"]
+      },
+      {
+        "id": 5,
+        "title": "Hands Played",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(bot_hands_played_total{limit_type=\"NL10\"}[5m])",
+            "legendFormat": "NL10 hands/min",
+            "color": "#66FCF1"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Hands/min"
+          }
+        ],
+        "colors": ["#66FCF1"]
+      },
+      {
+        "id": 6,
+        "title": "Cache Hit Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(redis_cache_hits_total[5m]) / rate(redis_cache_requests_total[5m])",
+            "legendFormat": "Hit Rate",
+            "color": "#00FF88"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percentunit",
+            "label": "Hit Rate"
+          }
+        ],
+        "colors": ["#00FF88"]
+      }
+    ],
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "schemaVersion": 27,
+    "version": 1,
+    "links": []
+  }
+}

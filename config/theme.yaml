@@ -1,0 +1,49 @@
+# Цветовая схема проекта Poker Rake Bot
+# Темная тема с бирюзовыми акцентами
+
+colors:
+  primary:
+    dark: "#0B0C10"      # Самый темный фон
+    medium: "#1F2833"    # Средний фон
+    light: "#C5C6C7"     # Светлый акцент
+    accent: "#66FCF1"    # Яркий акцент (бирюзовый)
+    neutral: "#45A29E"   # Нейтральный бирюзовый
+  
+  # Семантические цвета
+  semantic:
+    success: "#00FF88"   # Зеленый для успеха
+    warning: "#FFB800"   # Желтый для предупреждений
+    error: "#FF4444"     # Красный для ошибок
+    info: "#66FCF1"      # Бирюзовый для информации
+  
+  # Градиенты
+  gradients:
+    primary: ["#0B0C10", "#1F2833", "#C5C6C7"]
+    accent: ["#C5C6C7", "#66FCF1"]
+    dark: ["#0B0C10", "#1F2833"]
+  
+  # Текст
+  text:
+    primary: "#FFFFFF"   # Белый основной текст
+    secondary: "#C5C6C7" # Светло-серый вторичный текст
+    muted: "#888888"     # Приглушенный текст
+    inverse: "#0B0C10"   # Текст на светлом фоне
+
+# Применение цветов
+usage:
+  backgrounds:
+    main: "#0B0C10"
+    card: "#1F2833"
+    panel: "#C5C6C7"
+    hover: "#66FCF1"
+  
+  borders:
+    default: "#C5C6C7"
+    focus: "#66FCF1"
+    muted: "#45A29E"
+  
+  buttons:
+    primary: "#66FCF1"
+    primary_hover: "#45A29E"
+    secondary: "#45A29E"
+    secondary_hover: "#1F2833"

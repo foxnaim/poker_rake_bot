@@ -1,0 +1,82 @@
+# Конфигурация стилей игры бота
+# Целевые параметры для разных лимитов и режимов
+
+styles:
+  NL10:
+    gentle:
+      vpip_min: 22
+      vpip_max: 26
+      pfr_min: 18
+      pfr_max: 22
+      three_bet_min: 6
+      three_bet_max: 8
+      aggression_factor_min: 2.0
+      aggression_factor_max: 2.5
+      target_winrate_min: 2.0
+      target_winrate_max: 4.0
+      description: "Мягкий бот для слабых пулов"
+    
+    neutral:
+      vpip_min: 26
+      vpip_max: 30
+      pfr_min: 20
+      pfr_max: 24
+      three_bet_min: 8
+      three_bet_max: 10
+      aggression_factor_min: 2.5
+      aggression_factor_max: 3.0
+      target_winrate_min: 3.0
+      target_winrate_max: 5.0
+      description: "Основной режим: много экшна и рейка"
+
+  NL50:
+    gentle:
+      vpip_min: 22
+      vpip_max: 25
+      pfr_min: 18
+      pfr_max: 21
+      three_bet_min: 7
+      three_bet_max: 9
+      aggression_factor_min: 2.0
+      aggression_factor_max: 2.5
+      target_winrate_min: 2.0
+      target_winrate_max: 4.0
+      description: "Осторожный стиль для полей с большим числом фишей"
+    
+    neutral:
+      vpip_min: 25
+      vpip_max: 29
+      pfr_min: 20
+      pfr_max: 24
+      three_bet_min: 9
+      three_bet_max: 11
+      aggression_factor_min: 2.5
+      aggression_factor_max: 3.0
+      target_winrate_min: 3.0
+      target_winrate_max: 5.0
+      description: "Рег-бот под рейк, баланс GTO/эксплойта"
+
+# Скрытые параметры поведения
+anti_pattern:
+  # ВАЖНО: Anti-patterns ухудшают винрейт бота!
+  # Включать только если нужна "человечность" для обхода детекции
+  # По умолчанию ОТКЛЮЧЕНО для максимизации винрейта
+  enabled: false
+  max_bluff_ratio_per_street:
+    flop: 0.35
+    turn: 0.30
+    river: 0.25
+  min_fold_equity_target: 0.20
+  max_3bet_streak: 3
+  randomizer_noise_seed: 42
+  timing_delay_min_ms: 30
+  timing_delay_max_ms: 150
+
+# Веса для Decision Router
+decision_weights:
+  preflop:
+    gto_weight: 0.7
+    exploit_weight: 0.3
+  postflop:
+    gto_weight: 0.4
+    exploit_weight: 0.6

@@ -1,0 +1,49 @@
+# Core
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9
+asyncpg==0.29.0
+
+# Redis
+redis==5.0.1
+hiredis==2.2.3
+
+# Poker simulation
+pokerenv==0.1.0  # или neuron_poker
+numpy==1.24.3
+numba==0.58.1
+
+# ML/Training (future)
+# torch==2.1.0  # для policy сетей в будущем
+
+# Monitoring
+prometheus-client==0.19.0
+matplotlib==3.8.2  # Для графиков валидации
+
+# Utils
+python-dotenv==1.0.0
+python-multipart==0.0.6
+httpx==0.25.2
+pyyaml==6.0.1
+
+# Performance optimizations
+orjson==3.9.10  # Быстрый JSON (в 2-3 раза быстрее стандартного)
+msgpack==1.0.7  # Бинарная сериализация для Redis (быстрее JSON)
+aioredis==2.0.1  # Async Redis клиент для FastAPI
+cachetools==5.3.2  # In-memory кэш для частых операций
+diskcache==5.6.3  # Disk-based кэш для больших данных
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+requests==2.31.0  # For integration tests
+
+# Scheduling
+schedule==1.2.0
