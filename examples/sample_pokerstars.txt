@@ -1,0 +1,130 @@
+PokerStars Hand #240123456789: Hold'em No Limit ($0.05/$0.10 USD) - 2024/01/15 12:34:56 ET
+Table 'Europa IX' 6-max Seat #1 is the button
+Seat 1: Villain1 ($10.00 in chips)
+Seat 2: Hero ($12.50 in chips)
+Seat 3: Villain2 ($8.75 in chips)
+Seat 4: Villain3 ($15.30 in chips)
+Seat 5: Villain4 ($10.00 in chips)
+Seat 6: Villain5 ($9.25 in chips)
+Hero: posts small blind $0.05
+Villain2: posts big blind $0.10
+*** HOLE CARDS ***
+Dealt to Hero [As Kh]
+Villain3: folds
+Villain4: raises $0.20 to $0.30
+Villain5: folds
+Villain1: folds
+Hero: raises $0.70 to $1.00
+Villain2: folds
+Villain4: calls $0.70
+*** FLOP *** [Jh Ts 9c]
+Hero: bets $0.80
+Villain4: calls $0.80
+*** TURN *** [Jh Ts 9c] [Qc]
+Hero: bets $2.00
+Villain4: calls $2.00
+*** RIVER *** [Jh Ts 9c Qc] [2d]
+Hero: bets $4.50
+Villain4: folds
+Uncalled bet ($4.50) returned to Hero
+Hero collected $7.50 from pot
+Hero: doesn't show hand
+*** SUMMARY ***
+Total pot $7.90 | Rake $0.40
+Board [Jh Ts 9c Qc 2d]
+Seat 1: Villain1 (button) folded before Flop (didn't bet)
+Seat 2: Hero (small blind) collected ($7.50)
+Seat 3: Villain2 (big blind) folded before Flop
+Seat 4: Villain3 folded before Flop (didn't bet)
+Seat 5: Villain4 folded on the River
+Seat 6: Villain5 folded before Flop (didn't bet)
+
+
+PokerStars Hand #240123456790: Hold'em No Limit ($0.05/$0.10 USD) - 2024/01/15 12:36:22 ET
+Table 'Europa IX' 6-max Seat #2 is the button
+Seat 1: Villain1 ($10.00 in chips)
+Seat 2: Hero ($16.40 in chips)
+Seat 3: Villain2 ($8.65 in chips)
+Seat 4: Villain3 ($15.30 in chips)
+Seat 5: Villain4 ($6.20 in chips)
+Seat 6: Villain5 ($9.25 in chips)
+Villain2: posts small blind $0.05
+Villain3: posts big blind $0.10
+*** HOLE CARDS ***
+Dealt to Hero [Qh Qd]
+Villain4: folds
+Villain5: raises $0.20 to $0.30
+Villain1: calls $0.30
+Hero: raises $0.90 to $1.20
+Villain2: folds
+Villain3: folds
+Villain5: calls $0.90
+Villain1: folds
+*** FLOP *** [7s 3h 2c]
+Villain5: checks
+Hero: bets $1.50
+Villain5: calls $1.50
+*** TURN *** [7s 3h 2c] [Kh]
+Villain5: checks
+Hero: bets $3.00
+Villain5: raises $3.55 to $6.55 and is all-in
+Hero: calls $3.55
+*** RIVER *** [7s 3h 2c Kh] [4d]
+*** SHOW DOWN ***
+Villain5: shows [Ks Jc] (a pair of Kings)
+Hero: shows [Qh Qd] (a pair of Queens)
+Villain5 collected $18.10 from pot
+*** SUMMARY ***
+Total pot $18.95 | Rake $0.85
+Board [7s 3h 2c Kh 4d]
+Seat 1: Villain1 folded before Flop
+Seat 2: Hero (button) showed [Qh Qd] and lost with a pair of Queens
+Seat 3: Villain2 (small blind) folded before Flop
+Seat 4: Villain3 (big blind) folded before Flop
+Seat 5: Villain4 folded before Flop (didn't bet)
+Seat 6: Villain5 showed [Ks Jc] and won ($18.10) with a pair of Kings
+
+
+PokerStars Hand #240123456791: Hold'em No Limit ($0.05/$0.10 USD) - 2024/01/15 12:38:45 ET
+Table 'Europa IX' 6-max Seat #3 is the button
+Seat 1: Villain1 ($9.70 in chips)
+Seat 2: Hero ($7.15 in chips)
+Seat 3: Villain2 ($8.60 in chips)
+Seat 4: Villain3 ($15.20 in chips)
+Seat 5: Villain4 ($6.20 in chips)
+Seat 6: Villain5 ($18.10 in chips)
+Villain3: posts small blind $0.05
+Villain4: posts big blind $0.10
+*** HOLE CARDS ***
+Dealt to Hero [Ah Ac]
+Villain5: folds
+Villain1: folds
+Hero: raises $0.20 to $0.30
+Villain2: folds
+Villain3: calls $0.25
+Villain4: folds
+*** FLOP *** [9d 5c 3s]
+Villain3: checks
+Hero: bets $0.40
+Villain3: calls $0.40
+*** TURN *** [9d 5c 3s] [7h]
+Villain3: checks
+Hero: bets $1.00
+Villain3: calls $1.00
+*** RIVER *** [9d 5c 3s 7h] [2c]
+Villain3: checks
+Hero: bets $2.50
+Villain3: calls $2.50
+*** SHOW DOWN ***
+Hero: shows [Ah Ac] (a pair of Aces)
+Villain3: mucks hand
+Hero collected $8.00 from pot
+*** SUMMARY ***
+Total pot $8.30 | Rake $0.30
+Board [9d 5c 3s 7h 2c]
+Seat 1: Villain1 folded before Flop (didn't bet)
+Seat 2: Hero showed [Ah Ac] and won ($8.00) with a pair of Aces
+Seat 3: Villain2 (button) folded before Flop (didn't bet)
+Seat 4: Villain3 (small blind) mucked
+Seat 5: Villain4 (big blind) folded before Flop
+Seat 6: Villain5 folded before Flop (didn't bet)
