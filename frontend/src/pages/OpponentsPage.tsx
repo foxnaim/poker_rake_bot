@@ -97,7 +97,7 @@ const OpponentsPage: React.FC = () => {
         <div style={statItemStyle}>
           <span style={statLabelStyle}>Avg Hands Played</span>
           <span style={statValueStyle}>
-            {Math.round(opponents.reduce((acc, o) => acc + o.hands_played, 0) / opponents.length)}
+            {opponents.length > 0 ? Math.round(opponents.reduce((acc, o) => acc + (o.hands_played || 0), 0) / opponents.length) : 0}
           </span>
         </div>
       </div>
@@ -180,7 +180,7 @@ const filterButtonStyle: React.CSSProperties = {
 const activeFilterStyle: React.CSSProperties = {
   background: '#66FCF1',
   color: '#0B0C10',
-  borderColor: '#66FCF1'
+  border: '1px solid #66FCF1'
 };
 
 const statsCardStyle: React.CSSProperties = {

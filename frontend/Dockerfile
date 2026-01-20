@@ -5,8 +5,8 @@ WORKDIR /app
 # Копируем package files
 COPY package*.json ./
 
-# Устанавливаем зависимости
-RUN npm install
+# Устанавливаем зависимости (с cache bust)
+RUN npm install && npm install axios react-router-dom recharts
 
 # Копируем исходный код
 COPY . .
