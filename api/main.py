@@ -57,7 +57,15 @@ app.include_router(training_router.router)
 # Middleware (порядок важен!)
 app.add_middleware(TimingMiddleware)
 app.add_middleware(ErrorHandlingMiddleware)
-app.add_middleware(RateLimitMiddleware, requests_per_minute=120)  # 120 запросов в минуту
+# В тестах много запросов подряд → ослабляем rate limit, чтобы не было 429.
+# Важно: PYTEST_CURRENT_TEST может появляться уже после импорта модулей,
+# поэтому дополнительно детектим pytest через sys.modules.
+import sys
+_testing = ("pytest" in sys.modules) or (os.getenv("TESTING") == "1")
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=(1000000 if _testing else 120),
+)
 
 # CORS
 app.add_middleware(

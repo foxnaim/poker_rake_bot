@@ -53,24 +53,41 @@ async def log_hand_endpoint(
                 session_id_int = session.id
         
         # Сохраняем раздачу
-        hand = Hand(
-            hand_id=request.hand_id,
-            table_id=request.table_id,
-            limit_type=request.limit_type,
-            session_id=session_id_int,
-            players_count=request.players_count,
-            hero_position=request.hero_position,
-            hero_cards=request.hero_cards,
-            board_cards=request.board_cards or "",
-            pot_size=request.pot_size,
-            rake_amount=calculated_rake,
-            hero_result=request.hero_result,
-            hand_history=request.hand_history,
-            timestamp=datetime.utcnow()
-        )
-        
-        db.add(hand)
-        db.commit()
+        existing = db.query(Hand).filter(Hand.hand_id == request.hand_id).first()
+        if existing:
+            # idempotent update (полезно для тестов/повторной загрузки логов)
+            existing.table_id = request.table_id
+            existing.limit_type = request.limit_type
+            existing.session_id = session_id_int
+            existing.players_count = request.players_count
+            existing.hero_position = request.hero_position
+            existing.hero_cards = request.hero_cards
+            existing.board_cards = request.board_cards or ""
+            existing.pot_size = request.pot_size
+            existing.rake_amount = calculated_rake
+            existing.hero_result = request.hero_result
+            existing.hand_history = request.hand_history
+            existing.timestamp = datetime.utcnow()
+            db.commit()
+        else:
+            hand = Hand(
+                hand_id=request.hand_id,
+                table_id=request.table_id,
+                limit_type=request.limit_type,
+                session_id=session_id_int,
+                players_count=request.players_count,
+                hero_position=request.hero_position,
+                hero_cards=request.hero_cards,
+                board_cards=request.board_cards or "",
+                pot_size=request.pot_size,
+                rake_amount=calculated_rake,
+                hero_result=request.hero_result,
+                hand_history=request.hand_history,
+                timestamp=datetime.utcnow()
+            )
+            
+            db.add(hand)
+            db.commit()
         
         # Обновляем метрики сессий (если есть активная сессия)
         from data.models import BotStats

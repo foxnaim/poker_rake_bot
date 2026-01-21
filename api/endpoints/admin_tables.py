@@ -9,7 +9,7 @@ from datetime import datetime
 from data.database import get_db
 from data.models import Table, Room
 from api.auth import require_admin
-from api.schemas import audit_log_create
+from api.audit import audit_log_create
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin", "tables"])
 

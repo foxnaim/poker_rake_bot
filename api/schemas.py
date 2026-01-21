@@ -3,7 +3,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
 from datetime import datetime
-from sqlalchemy.orm import Session
 
 
 class GameStateRequest(BaseModel):
@@ -334,33 +333,3 @@ class AgentListResponse(BaseModel):
     version: Optional[str]
     assigned_session_id: Optional[int]
     heartbeat_lag_seconds: Optional[float]
-
-
-# ============================================
-# Week 2: Admin schemas
-# ============================================
-
-def audit_log_create(
-    db: Session,
-    user_id: str,
-    action: str,
-    entity_type: str,
-    entity_id: Optional[int],
-    old_values: Optional[Dict] = None,
-    new_values: Optional[Dict] = None,
-    metadata: Optional[Dict] = None
-):
-    """Создает запись в audit log"""
-    from data.models import AuditLog
-    
-    audit = AuditLog(
-        user_id=user_id,
-        action=action,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        old_values=old_values,
-        new_values=new_values,
-        metadata=metadata
-    )
-    db.add(audit)
-    db.commit()

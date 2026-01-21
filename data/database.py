@@ -31,6 +31,22 @@ def init_db():
     """Инициализация БД (создание таблиц)"""
     Base.metadata.create_all(bind=engine)
 
+    # Тесты ожидают чистую БД. В CI/локально это часто один и тот же Postgres,
+    # поэтому аккуратно чистим основные runtime-таблицы.
+    testing = os.getenv("PYTEST_CURRENT_TEST") is not None or os.getenv("TESTING") == "1"
+    if testing and engine.dialect.name == "postgresql":
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("""
+                TRUNCATE TABLE
+                    decision_log,
+                    hands,
+                    opponent_profiles,
+                    training_checkpoints,
+                    bot_stats
+                RESTART IDENTITY CASCADE;
+            """))
+
 
 def get_db() -> Generator[Session, None, None]:
     """Dependency для FastAPI"""

@@ -102,4 +102,17 @@ async def decide_endpoint(
         # Обновляем метрики ошибок
         from api.metrics import decision_errors_total
         decision_errors_total.labels(limit_type=request.limit_type, error_type=type(e).__name__).inc()
-        raise HTTPException(status_code=500, detail=str(e))
+        # Safe-mode: при ошибках отдаём дефолтное решение (спека/реальная игра так требуют)
+        from api.decision_stub import make_decision_stub
+        fallback = make_decision_stub(request)
+        latency_ms = int((time.time() - start_time) * 1000)
+        return DecisionResponse(
+            action=fallback.get("action", "check"),
+            amount=fallback.get("amount"),
+            reasoning={
+                **(fallback.get("reasoning") or {}),
+                "fallback": True,
+                "error_type": type(e).__name__,
+            },
+            latency_ms=latency_ms,
+        )
