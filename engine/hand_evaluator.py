@@ -28,23 +28,29 @@ def evaluate_hand(cards: List[Tuple[int, int]]) -> int:
         suit_counts[suit] += 1
     is_flush = np.max(suit_counts) >= 5
     
-    # Проверка на стрит
-    sorted_ranks = sorted(set(ranks), reverse=True)
+    # Проверка на стрит (Numba-friendly: через rank_counts)
     is_straight = False
     straight_high = 0
-    
-    if len(sorted_ranks) >= 5:
-        for i in range(len(sorted_ranks) - 4):
-            if sorted_ranks[i] - sorted_ranks[i+4] == 4:
-                is_straight = True
-                straight_high = sorted_ranks[i]
+
+    # Обычные стриты: от A-high (14) до 6-high (6)
+    # (5-high обрабатываем отдельно как wheel A2345)
+    for high in range(14, 5, -1):  # 14..6
+        ok = True
+        for r in range(high, high - 5, -1):
+            if rank_counts[r] == 0:
+                ok = False
                 break
-        # A-2-3-4-5 стрит
-        if not is_straight and 14 in sorted_ranks:
-            low_straight = [14, 5, 4, 3, 2]
-            if all(r in sorted_ranks for r in low_straight):
-                is_straight = True
-                straight_high = 5
+        if ok:
+            is_straight = True
+            straight_high = high
+            break
+
+    # Wheel: A-2-3-4-5
+    if not is_straight:
+        if (rank_counts[14] > 0 and rank_counts[5] > 0 and rank_counts[4] > 0
+                and rank_counts[3] > 0 and rank_counts[2] > 0):
+            is_straight = True
+            straight_high = 5
     
     # Определение комбинации
     pairs = []
@@ -81,10 +87,15 @@ def evaluate_hand(cards: List[Tuple[int, int]]) -> int:
     # Флеш
     if is_flush:
         flush_ranks = sorted([r for i, r in enumerate(ranks) if suits[i] == np.argmax(suit_counts)], reverse=True)[:5]
-        score = 5000000
-        for i, rank in enumerate(flush_ranks):
-            score += rank * (100 ** (4 - i))
-        return score
+        # pack5 в base-15, чтобы kickers < 1e6
+        kickers = (
+            flush_ranks[0] * (15 ** 4)
+            + flush_ranks[1] * (15 ** 3)
+            + flush_ranks[2] * (15 ** 2)
+            + flush_ranks[3] * 15
+            + flush_ranks[4]
+        )
+        return 5000000 + kickers
     
     # Стрит
     if is_straight:
@@ -93,24 +104,27 @@ def evaluate_hand(cards: List[Tuple[int, int]]) -> int:
     # Тройка
     if len(trips) > 0:
         kickers = sorted([r for r in ranks if r != trips[0]], reverse=True)[:2]
-        return 3000000 + trips[0] * 10000 + kickers[0] * 100 + kickers[1]
+        return 3000000 + trips[0] * (15 ** 2) + kickers[0] * 15 + kickers[1]
     
     # Две пары
     if len(pairs) >= 2:
         kicker = max([r for r in ranks if r not in pairs[:2]])
-        return 2000000 + pairs[0] * 10000 + pairs[1] * 100 + kicker
+        return 2000000 + pairs[0] * (15 ** 2) + pairs[1] * 15 + kicker
     
     # Пара
     if len(pairs) == 1:
         kickers = sorted([r for r in ranks if r != pairs[0]], reverse=True)[:3]
-        return 1000000 + pairs[0] * 1000000 + kickers[0] * 10000 + kickers[1] * 100 + kickers[2]
+        return 1000000 + pairs[0] * (15 ** 3) + kickers[0] * (15 ** 2) + kickers[1] * 15 + kickers[2]
     
     # Старшая карта
     high_cards = sorted(ranks, reverse=True)[:5]
-    score = 0
-    for i, rank in enumerate(high_cards):
-        score += rank * (100 ** (4 - i))
-    return score
+    return (
+        high_cards[0] * (15 ** 4)
+        + high_cards[1] * (15 ** 3)
+        + high_cards[2] * (15 ** 2)
+        + high_cards[3] * 15
+        + high_cards[4]
+    )
 
 
 def compare_hands(hand1: List[Tuple[int, int]], hand2: List[Tuple[int, int]]) -> int:

@@ -44,6 +44,16 @@ app = FastAPI(
     openapi_url="/openapi.json"  # Явно указываем URL для OpenAPI схемы
 )
 
+# Регистрируем роутеры сразу (чтобы они были доступны даже без startup events,
+# например в некоторых тестах с TestClient без context manager).
+app.include_router(decide_router.router)
+app.include_router(log_hand_router.router)
+app.include_router(profiles_router.router)
+app.include_router(api_keys_router.router)
+app.include_router(stats_router.router)
+app.include_router(sessions_router.router)
+app.include_router(training_router.router)
+
 # Middleware (порядок важен!)
 app.add_middleware(TimingMiddleware)
 app.add_middleware(ErrorHandlingMiddleware)
@@ -63,24 +73,7 @@ app.add_middleware(
 async def startup_event():
     """Инициализация при запуске"""
     init_db()
-
-    # Регистрируем роутеры
-    app.include_router(decide_router.router)
-    app.include_router(log_hand_router.router)
-    app.include_router(profiles_router.router)
-    app.include_router(api_keys_router.router)
-    app.include_router(stats_router.router)
-    app.include_router(sessions_router.router)
-    app.include_router(training_router.router)
-    app.include_router(agents_router.router)  # Week 3: Agent protocol
-    
-    # Week 2: Admin роутеры
-    app.include_router(admin_bots_router.router)
-    app.include_router(admin_rooms_router.router)
-    app.include_router(admin_tables_router.router)
-    app.include_router(admin_rake_models_router.router)
-    app.include_router(admin_bot_configs_router.router)
-    app.include_router(admin_sessions_router.router)
+    # Week2+ роутеры (operator control-plane) подключим после стабилизации
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -322,95 +315,6 @@ async def metrics():
 async def websocket_live(websocket: WebSocket):
     """WebSocket endpoint для real-time обновлений"""
     await websocket_endpoint(websocket)
-
-
-@app.post("/api/v1/decide", response_model=DecisionResponse)
-async def decide(
-    request: GameStateRequest,
-    db: Session = Depends(get_db),
-    api_key_valid: bool = Depends(optional_api_key)
-):
-    """
-    Основной endpoint для принятия решения ботом
-    
-    Args:
-        request: Состояние игры
-        
-    Returns:
-        Решение бота (действие и размер ставки)
-    """
-    start_time = time.time()
-    
-    try:
-        # Decision Router - GTO + Exploit
-        decision = make_decision(request)
-        
-        # Латентность уже измерена в make_decision
-        latency_ms = decision.get("latency_ms", 0)
-        
-        # Обновляем метрики
-        decision_latency_seconds.labels(
-            limit_type=request.limit_type,
-            street=request.street
-        ).observe(latency_ms / 1000.0)
-        
-        decisions_total.labels(
-            limit_type=request.limit_type,
-            action=decision["action"]
-        ).inc()
-        
-        return DecisionResponse(
-            action=decision["action"],
-            amount=decision.get("amount"),
-            reasoning=decision.get("reasoning", {}),
-            latency_ms=latency_ms or 0
-        )
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/v1/log_hand")
-async def log_hand(
-    request: HandLogRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    Логирование завершенной раздачи
-    
-    Args:
-        request: Данные раздачи
-    """
-    try:
-        # В будущем: сохранение в БД
-        # save_hand(db, request)
-        return {"status": "logged", "hand_id": request.hand_id}
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/v1/opponent/{opponent_id}", response_model=OpponentProfileResponse)
-async def get_opponent_profile(
-    opponent_id: str,
-    db: Session = Depends(get_db)
-):
-    """
-    Получение профиля оппонента
-    
-    Args:
-        opponent_id: ID оппонента
-    """
-    # Stub - возвращает пустой профиль
-    return OpponentProfileResponse(
-        opponent_id=opponent_id,
-        vpip=0.0,
-        pfr=0.0,
-        three_bet_pct=0.0,
-        aggression_factor=0.0,
-        hands_played=0,
-        classification="unknown"
-    )
 
 
 # Кастомная OpenAPI схема

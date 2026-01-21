@@ -28,10 +28,14 @@ class RedisCache:
             redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
         
         # Connection pooling для лучшей производительности
+        #
+        # Важно: если используем msgpack, в Redis кладём bytes. Поэтому
+        # decode_responses должен быть False, иначе redis-py попытается
+        # декодировать бинарь как UTF-8 и упадёт.
         self.pool = ConnectionPool.from_url(
             redis_url,
             max_connections=50,
-            decode_responses=True
+            decode_responses=False
         )
         self.redis_client = redis.Redis(connection_pool=self.pool)
         self.default_ttl = 3600  # 1 час по умолчанию
@@ -54,7 +58,7 @@ class RedisCache:
         if cached:
             if self.use_msgpack and MSGPACK_AVAILABLE:
                 return msgpack.unpackb(cached, raw=False)
-            return json.loads(cached)
+            return json.loads(cached.decode("utf-8"))
         return None
     
     def set_strategy(self, infoset: str, limit_type: str, strategy: Dict[str, float],
@@ -70,9 +74,9 @@ class RedisCache:
         """
         key = f"strategy:{limit_type}:{infoset}"
         if self.use_msgpack and MSGPACK_AVAILABLE:
-            value = msgpack.packb(strategy)
+            value = msgpack.packb(strategy, use_bin_type=True)
         else:
-            value = json.dumps(strategy)
+            value = json.dumps(strategy).encode("utf-8")
         
         if ttl is None:
             ttl = self.default_ttl
@@ -95,7 +99,7 @@ class RedisCache:
         if cached:
             if self.use_msgpack and MSGPACK_AVAILABLE:
                 return msgpack.unpackb(cached, raw=False)
-            return json.loads(cached)
+            return json.loads(cached.decode("utf-8"))
         return None
     
     def set_opponent_profile(self, opponent_id: str, profile: Dict, ttl: Optional[int] = None):
@@ -109,9 +113,9 @@ class RedisCache:
         """
         key = f"opponent:{opponent_id}"
         if self.use_msgpack and MSGPACK_AVAILABLE:
-            value = msgpack.packb(profile)
+            value = msgpack.packb(profile, use_bin_type=True)
         else:
-            value = json.dumps(profile)
+            value = json.dumps(profile).encode("utf-8")
         
         if ttl is None:
             ttl = self.default_ttl
@@ -139,7 +143,7 @@ class RedisCache:
         if cached:
             if self.use_msgpack and MSGPACK_AVAILABLE:
                 return msgpack.unpackb(cached, raw=False)
-            return json.loads(cached)
+            return json.loads(cached.decode("utf-8"))
         return None
     
     def set_game_state_cache(self, state_hash: str, data: Any, ttl: Optional[int] = None):
@@ -153,9 +157,9 @@ class RedisCache:
         """
         key = f"gamestate:{state_hash}"
         if self.use_msgpack and MSGPACK_AVAILABLE:
-            value = msgpack.packb(data)
+            value = msgpack.packb(data, use_bin_type=True)
         else:
-            value = json.dumps(data)
+            value = json.dumps(data).encode("utf-8")
         
         if ttl is None:
             ttl = 300  # 5 минут для состояний игры

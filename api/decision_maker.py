@@ -54,6 +54,23 @@ def make_decision(request: GameStateRequest) -> Dict:
         latency_ms = int((time.time() - start_time) * 1000)
         cached_decision["latency_ms"] = latency_ms
         cached_decision["cached"] = True
+        # Даже если решение из кэша — логируем (тесты/операторка ожидают запись).
+        db_cached = SessionLocal()
+        try:
+            decision_logger.log_decision(
+                hand_id=request.hand_id,
+                street=request.street,
+                game_state=game_state,
+                gto_strategy=None,
+                exploit_adjustments=None,
+                final_action=cached_decision.get("action", ""),
+                action_amount=cached_decision.get("amount"),
+                reasoning=cached_decision.get("reasoning", {}),
+                latency_ms=latency_ms,
+                db_session=db_cached,
+            )
+        finally:
+            db_cached.close()
         return cached_decision
     
     # Получаем ID оппонентов

@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS api_keys (
     expires_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_api_keys_key ON api_keys(api_key);
-CREATE INDEX idx_api_keys_active ON api_keys(is_active);
+CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys(api_key);
+CREATE INDEX IF NOT EXISTS idx_api_keys_active ON api_keys(is_active);
 
 -- Таблица для сессий (для WebSocket и контекста)
 CREATE TABLE IF NOT EXISTS sessions (
@@ -44,9 +44,9 @@ CREATE TABLE IF NOT EXISTS sessions (
     is_active BOOLEAN DEFAULT TRUE
 );
 
-CREATE INDEX idx_sessions_client_id ON sessions(client_id);
-CREATE INDEX idx_sessions_table_id ON sessions(table_id);
-CREATE INDEX idx_sessions_active ON sessions(is_active);
+CREATE INDEX IF NOT EXISTS idx_sessions_client_id ON sessions(client_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_table_id ON sessions(table_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_active ON sessions(is_active);
 
 -- Обновление decision_log для v1.2
 ALTER TABLE decision_log
@@ -67,8 +67,8 @@ CREATE TABLE IF NOT EXISTS performance_log (
     metadata JSONB
 );
 
-CREATE INDEX idx_performance_log_timestamp ON performance_log(timestamp);
-CREATE INDEX idx_performance_log_endpoint ON performance_log(endpoint);
+CREATE INDEX IF NOT EXISTS idx_performance_log_timestamp ON performance_log(timestamp);
+CREATE INDEX IF NOT EXISTS idx_performance_log_endpoint ON performance_log(endpoint);
 
 -- Таблица для алертов
 CREATE TABLE IF NOT EXISTS alerts (
@@ -82,8 +82,8 @@ CREATE TABLE IF NOT EXISTS alerts (
     is_resolved BOOLEAN DEFAULT FALSE
 );
 
-CREATE INDEX idx_alerts_type ON alerts(alert_type);
-CREATE INDEX idx_alerts_resolved ON alerts(is_resolved);
+CREATE INDEX IF NOT EXISTS idx_alerts_type ON alerts(alert_type);
+CREATE INDEX IF NOT EXISTS idx_alerts_resolved ON alerts(is_resolved);
 
 -- v1.3 hotfix: bot_stats.period_end должен быть nullable (NULL = активная сессия)
 DO $$
@@ -98,3 +98,9 @@ BEGIN
         ALTER TABLE bot_stats ALTER COLUMN period_end DROP NOT NULL;
     END IF;
 END $$;
+
+-- v1.3 hotfix: новые поля статистики (должны совпадать с data/models.py)
+ALTER TABLE bot_stats
+    ADD COLUMN IF NOT EXISTS rake_100 DECIMAL(6, 2) DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS profit_bb_100 DECIMAL(6, 2) DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS hands_per_hour DECIMAL(6, 2) DEFAULT 0;

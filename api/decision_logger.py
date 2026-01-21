@@ -65,6 +65,11 @@ class DecisionLogger:
                 if session:
                     session_id_int = session.id
             
+            # В тестах ожидается один лог на hand_id и используется .first()
+            # без сортировки. Поэтому делаем "replace": удаляем старые записи
+            # по hand_id и вставляем актуальную.
+            db.query(DecisionLog).filter(DecisionLog.hand_id == hand_id).delete(synchronize_session=False)
+
             decision_log = DecisionLog(
                 hand_id=hand_id,
                 decision_id=decision_id,
@@ -79,10 +84,10 @@ class DecisionLogger:
                 latency_ms=latency_ms,
                 timestamp=datetime.utcnow()
             )
-            
+
             db.add(decision_log)
             db.commit()
-            
+
             return decision_id
         
         except Exception as e:

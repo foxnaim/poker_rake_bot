@@ -152,7 +152,21 @@ class Room(Base):
     
     # Relationships
     tables = relationship("Table", back_populates="room", cascade="all, delete-orphan")
-    rake_models_rel = relationship("RakeModel", back_populates="room", cascade="all, delete-orphan")
+    # Важно: есть ДВЕ связи rooms <-> rake_models:
+    # 1) rooms.rake_model_id -> rake_models.id (дефолтная модель рейка комнаты)
+    # 2) rake_models.room_id -> rooms.id (список моделей рейка, в т.ч. per-limit)
+    # Поэтому явно указываем foreign_keys чтобы избежать неоднозначности маппинга.
+    default_rake_model = relationship(
+        "RakeModel",
+        foreign_keys=[rake_model_id],
+        post_update=True,
+    )
+    rake_models_rel = relationship(
+        "RakeModel",
+        back_populates="room",
+        cascade="all, delete-orphan",
+        foreign_keys="RakeModel.room_id",
+    )
 
 
 class Table(Base):
@@ -187,7 +201,11 @@ class RakeModel(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    room = relationship("Room", back_populates="rake_models_rel")
+    room = relationship(
+        "Room",
+        back_populates="rake_models_rel",
+        foreign_keys=[room_id],
+    )
 
 
 class BotConfig(Base):

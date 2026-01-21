@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS bots (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_bots_alias ON bots(alias);
-CREATE INDEX idx_bots_active ON bots(active);
+CREATE INDEX IF NOT EXISTS idx_bots_alias ON bots(alias);
+CREATE INDEX IF NOT EXISTS idx_bots_active ON bots(active);
 
 -- Таблица комнат
 CREATE TABLE IF NOT EXISTS rooms (
@@ -31,9 +31,9 @@ CREATE TABLE IF NOT EXISTS rooms (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_rooms_room_link ON rooms(room_link);
-CREATE INDEX idx_rooms_status ON rooms(status);
-CREATE INDEX idx_rooms_type ON rooms(type);
+CREATE INDEX IF NOT EXISTS idx_rooms_room_link ON rooms(room_link);
+CREATE INDEX IF NOT EXISTS idx_rooms_status ON rooms(status);
+CREATE INDEX IF NOT EXISTS idx_rooms_type ON rooms(type);
 
 -- Таблица столов
 CREATE TABLE IF NOT EXISTS tables (
@@ -47,8 +47,8 @@ CREATE TABLE IF NOT EXISTS tables (
     UNIQUE(room_id, limit_type)  -- один лимит на комнату
 );
 
-CREATE INDEX idx_tables_room_id ON tables(room_id);
-CREATE INDEX idx_tables_limit_type ON tables(limit_type);
+CREATE INDEX IF NOT EXISTS idx_tables_room_id ON tables(room_id);
+CREATE INDEX IF NOT EXISTS idx_tables_limit_type ON tables(limit_type);
 
 -- Таблица моделей рейка
 CREATE TABLE IF NOT EXISTS rake_models (
@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS rake_models (
     UNIQUE(room_id, limit_type)  -- одна модель на room+limit
 );
 
-CREATE INDEX idx_rake_models_room_id ON rake_models(room_id);
-CREATE INDEX idx_rake_models_limit_type ON rake_models(limit_type);
+CREATE INDEX IF NOT EXISTS idx_rake_models_room_id ON rake_models(room_id);
+CREATE INDEX IF NOT EXISTS idx_rake_models_limit_type ON rake_models(limit_type);
 
 -- Таблица конфигураций ботов
 CREATE TABLE IF NOT EXISTS bot_configs (
@@ -84,8 +84,8 @@ CREATE TABLE IF NOT EXISTS bot_configs (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_bot_configs_bot_id ON bot_configs(bot_id);
-CREATE INDEX idx_bot_configs_is_default ON bot_configs(is_default);
+CREATE INDEX IF NOT EXISTS idx_bot_configs_bot_id ON bot_configs(bot_id);
+CREATE INDEX IF NOT EXISTS idx_bot_configs_is_default ON bot_configs(is_default);
 
 -- Таблица сессий ботов
 CREATE TABLE IF NOT EXISTS bot_sessions (
@@ -108,11 +108,11 @@ CREATE TABLE IF NOT EXISTS bot_sessions (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_bot_sessions_session_id ON bot_sessions(session_id);
-CREATE INDEX idx_bot_sessions_bot_id ON bot_sessions(bot_id);
-CREATE INDEX idx_bot_sessions_table_id ON bot_sessions(table_id);
-CREATE INDEX idx_bot_sessions_status ON bot_sessions(status);
-CREATE INDEX idx_bot_sessions_started_at ON bot_sessions(started_at);
+CREATE INDEX IF NOT EXISTS idx_bot_sessions_session_id ON bot_sessions(session_id);
+CREATE INDEX IF NOT EXISTS idx_bot_sessions_bot_id ON bot_sessions(bot_id);
+CREATE INDEX IF NOT EXISTS idx_bot_sessions_table_id ON bot_sessions(table_id);
+CREATE INDEX IF NOT EXISTS idx_bot_sessions_status ON bot_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_bot_sessions_started_at ON bot_sessions(started_at);
 
 -- Таблица агентов (физические экземпляры ботов)
 CREATE TABLE IF NOT EXISTS agents (
@@ -127,9 +127,9 @@ CREATE TABLE IF NOT EXISTS agents (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_agents_agent_id ON agents(agent_id);
-CREATE INDEX idx_agents_status ON agents(status);
-CREATE INDEX idx_agents_assigned_session_id ON agents(assigned_session_id);
+CREATE INDEX IF NOT EXISTS idx_agents_agent_id ON agents(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
+CREATE INDEX IF NOT EXISTS idx_agents_assigned_session_id ON agents(assigned_session_id);
 
 -- Таблица аудита (кто/что/когда изменил)
 CREATE TABLE IF NOT EXISTS audit_log (
@@ -144,10 +144,10 @@ CREATE TABLE IF NOT EXISTS audit_log (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_audit_log_user_id ON audit_log(user_id);
-CREATE INDEX idx_audit_log_action ON audit_log(action);
-CREATE INDEX idx_audit_log_entity_type ON audit_log(entity_type);
-CREATE INDEX idx_audit_log_created_at ON audit_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
+CREATE INDEX IF NOT EXISTS idx_audit_log_entity_type ON audit_log(entity_type);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
 
 -- ============================================
 -- 2. Обновление существующих таблиц (привязка к session_id)
@@ -196,24 +196,31 @@ END;
 $$ language 'plpgsql';
 
 -- Применяем триггеры к таблицам
+DROP TRIGGER IF EXISTS update_bots_updated_at ON bots;
 CREATE TRIGGER update_bots_updated_at BEFORE UPDATE ON bots
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_rooms_updated_at ON rooms;
 CREATE TRIGGER update_rooms_updated_at BEFORE UPDATE ON rooms
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_tables_updated_at ON tables;
 CREATE TRIGGER update_tables_updated_at BEFORE UPDATE ON tables
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_rake_models_updated_at ON rake_models;
 CREATE TRIGGER update_rake_models_updated_at BEFORE UPDATE ON rake_models
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_bot_configs_updated_at ON bot_configs;
 CREATE TRIGGER update_bot_configs_updated_at BEFORE UPDATE ON bot_configs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_bot_sessions_updated_at ON bot_sessions;
 CREATE TRIGGER update_bot_sessions_updated_at BEFORE UPDATE ON bot_sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_agents_updated_at ON agents;
 CREATE TRIGGER update_agents_updated_at BEFORE UPDATE ON agents
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

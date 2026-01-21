@@ -98,6 +98,9 @@ CREATE TABLE IF NOT EXISTS bot_stats (
     winrate_bb_100 DECIMAL(6, 2) DEFAULT 0,
     total_rake DECIMAL(10, 2) DEFAULT 0,
     rake_per_hour DECIMAL(10, 2) DEFAULT 0,
+    rake_100 DECIMAL(6, 2) DEFAULT 0,         -- рейк на 100 рук
+    profit_bb_100 DECIMAL(6, 2) DEFAULT 0,    -- профит в bb/100 (упрощенно)
+    hands_per_hour DECIMAL(6, 2) DEFAULT 0,   -- рук/час
     avg_pot_size DECIMAL(10, 2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

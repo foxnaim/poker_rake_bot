@@ -21,6 +21,7 @@ import re
 from typing import List, Dict, Optional, Any
 from decimal import Decimal
 from datetime import datetime
+from dataclasses import dataclass, field
 
 try:
     import requests
@@ -57,6 +58,117 @@ class HandHistoryParser:
             content = f.read()
 
         return self.parsers[room](content)
+
+    # ---------------------------------------------------------------------
+    # Упрощённый объектный интерфейс (используется тестами)
+    # ---------------------------------------------------------------------
+    def parse(self, hand_text: str, room: str = "pokerstars") -> Optional["ParsedHand"]:
+        """
+        Парсит один hand history текст и возвращает ParsedHand.
+
+        Это лёгкий (не полный) парсер, который покрывает тесты и базовые кейсы.
+        Для массового импорта используйте parse_file()/parse_and_upload().
+        """
+        if not hand_text or not hand_text.strip():
+            return None
+
+        # Hand id
+        m = re.search(r"Hand\s+#(\d+):", hand_text)
+        hand_id = m.group(1) if m else ""
+
+        # Limit type
+        m = re.search(r"\((NL\d+)\)", hand_text)
+        limit_type = m.group(1) if m else ""
+
+        # Players (Seat lines)
+        players: Dict[str, Any] = {}
+        for seat_m in re.finditer(r"^\s*Seat\s+\d+:\s*([^\(\n\r]+)\s*\(", hand_text, re.MULTILINE):
+            name = seat_m.group(1).strip()
+            if name:
+                players[name] = {}
+
+        # Actions
+        actions: List[Dict[str, Any]] = []
+        street = "preflop"
+        for raw_line in hand_text.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            if line.startswith("*** FLOP ***"):
+                street = "flop"
+                continue
+            if line.startswith("*** TURN ***"):
+                street = "turn"
+                continue
+            if line.startswith("*** RIVER ***"):
+                street = "river"
+                continue
+
+            # Игнорируем блайнды и служебные строки
+            if "posts small blind" in line or "posts big blind" in line:
+                continue
+            if line.startswith("***"):
+                continue
+
+            am = re.match(r"^([^:]+):\s+(raises|calls|bets|checks|folds)\s*(.*)$", line, re.IGNORECASE)
+            if not am:
+                continue
+
+            player = am.group(1).strip()
+            action = am.group(2).lower().strip()
+            # Нормализация под тесты (raise/call/bet/check/fold)
+            action = {
+                "raises": "raise",
+                "calls": "call",
+                "bets": "bet",
+                "checks": "check",
+                "folds": "fold",
+            }.get(action, action)
+            tail = am.group(3).strip()
+
+            amount: Optional[float] = None
+            # raises 2 to 3 / calls 2 / bets 5
+            m_to = re.search(r"to\s+([0-9]+(?:\.[0-9]+)?)", tail)
+            if m_to:
+                amount = float(m_to.group(1))
+            else:
+                m_amt = re.search(r"([0-9]+(?:\.[0-9]+)?)", tail)
+                if m_amt and action in ("calls", "bets"):
+                    amount = float(m_amt.group(1))
+
+            actions.append({
+                "street": street,
+                "player": player,
+                "action": action,
+                "amount": amount,
+                "raw": line,
+            })
+
+        return ParsedHand(
+            hand_id=hand_id,
+            limit_type=limit_type,
+            players=players,
+            actions=actions,
+            raw_text=hand_text,
+        )
+
+    def extract_player_stats(self, parsed_hand: "ParsedHand", player_name: str) -> Dict[str, Any]:
+        """
+        Упрощённая экстракция статов игрока из ParsedHand (для тестов/заглушек).
+        """
+        preflop_action = None
+        for a in parsed_hand.actions:
+            if a.get("street") != "preflop":
+                continue
+            if a.get("player") != player_name:
+                continue
+            preflop_action = a.get("action")
+            break
+
+        return {
+            "preflop_action": preflop_action or "none",
+        }
 
     def _parse_pokerstars(self, content: str) -> List[Dict[str, Any]]:
         """
@@ -363,6 +475,22 @@ def parse_and_upload(
             "status": "error",
             "message": f"Ошибка загрузки: {str(e)}"
         }
+
+
+@dataclass
+class ParsedHand:
+    """
+    Упрощённое представление раздачи (интерфейс под тесты).
+    """
+    hand_id: str
+    limit_type: str
+    players: Dict[str, Any] = field(default_factory=dict)
+    actions: List[Dict[str, Any]] = field(default_factory=list)
+    raw_text: str = ""
+
+
+# Глобальный экземпляр (для обратной совместимости с тестами/старым импортом)
+hand_history_parser = HandHistoryParser()
 
 
 # CLI интерфейс
