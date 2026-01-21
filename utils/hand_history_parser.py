@@ -3,8 +3,8 @@ Hand History Parser для парсинга hand history из покер-рум�
 
 Поддерживаемые форматы:
 - PokerStars
-- 888poker (TODO)
-- PartyPoker (TODO)
+- 888poker
+- PartyPoker
 
 Использование:
     from utils.hand_history_parser import HandHistoryParser
@@ -410,14 +410,411 @@ class HandHistoryParser:
         return opponents
 
     def _parse_888poker(self, content: str) -> List[Dict[str, Any]]:
-        """Парсит 888poker hand history (TODO)"""
-        print("Парсер 888poker пока не реализован")
-        return []
+        """
+        Парсит 888poker hand history
+
+        Формат 888poker:
+        ***** 888poker Hand History for Game 1234567890 *****
+        $0.05/$0.10 Blinds No Limit Holdem - *** 15 01 2024 12:34:56
+        Table TableName 6 Max (Real Money)
+        Seat 1 is the button
+        Total number of players : 6
+        Seat 1: Player1 ( $10.00 )
+        Seat 2: Hero ( $10.00 )
+        ...
+        """
+        hands = []
+
+        # Разбиваем на отдельные раздачи (двойной перенос строки или новая раздача)
+        hand_blocks = re.split(r'\*{5}\s*888poker Hand History', content)
+
+        for block in hand_blocks:
+            if not block.strip():
+                continue
+
+            # Восстанавливаем заголовок
+            block = "***** 888poker Hand History" + block
+
+            try:
+                hand_data = self._parse_888poker_hand(block)
+                if hand_data:
+                    hands.append(hand_data)
+            except Exception as e:
+                print(f"Ошибка парсинга 888poker раздачи: {e}")
+                continue
+
+        return hands
+
+    def _parse_888poker_hand(self, block: str) -> Optional[Dict[str, Any]]:
+        """Парсит одну раздачу 888poker"""
+
+        # Hand ID
+        hand_id_match = re.search(r'Game\s+(\d+)', block)
+        if not hand_id_match:
+            return None
+        hand_id = f"888_{hand_id_match.group(1)}"
+
+        # Table ID
+        table_match = re.search(r"Table\s+(\S+)", block)
+        table_id = table_match.group(1) if table_match else "Unknown"
+
+        # Blinds и limit type (например: $0.05/$0.10 -> NL10)
+        limit_match = re.search(r'\$(\d+\.?\d*)/\$(\d+\.?\d*)\s+Blinds', block)
+        if limit_match:
+            bb = float(limit_match.group(2))
+            bb_cents = int(bb * 100)
+            if bb_cents <= 2:
+                limit_type = "NL2"
+            elif bb_cents <= 5:
+                limit_type = "NL5"
+            elif bb_cents <= 10:
+                limit_type = "NL10"
+            elif bb_cents <= 25:
+                limit_type = "NL25"
+            elif bb_cents <= 50:
+                limit_type = "NL50"
+            else:
+                limit_type = "NL100"
+        else:
+            limit_type = "NL10"
+
+        # Players count
+        players_match = re.search(r'Total number of players\s*:\s*(\d+)', block)
+        players_count = int(players_match.group(1)) if players_match else 6
+
+        # Hero cards - в 888 формат: "Dealt to Hero [ Ks, Qh ]"
+        hero_cards_match = re.search(r'Dealt to (\w+)\s*\[\s*([^\]]+)\s*\]', block)
+        hero_cards = ""
+        hero_name = None
+        if hero_cards_match:
+            hero_name = hero_cards_match.group(1)
+            cards_raw = hero_cards_match.group(2)
+            # Убираем запятые и пробелы: "Ks, Qh" -> "KsQh"
+            hero_cards = cards_raw.replace(',', '').replace(' ', '')
+
+        # Hero position
+        hero_position = "Unknown"
+        if hero_name:
+            # Ищем seat героя
+            hero_seat_match = re.search(rf'Seat\s+(\d+):\s+{re.escape(hero_name)}', block)
+            if hero_seat_match:
+                seat = int(hero_seat_match.group(1))
+                button_match = re.search(r'Seat\s+(\d+)\s+is the button', block)
+                if button_match:
+                    button_seat = int(button_match.group(1))
+                    positions = ['BTN', 'SB', 'BB', 'UTG', 'MP', 'CO']
+                    offset = (seat - button_seat) % players_count
+                    hero_position = positions[min(offset, len(positions) - 1)]
+
+        # Board cards
+        board_cards = ""
+        flop_match = re.search(r'\*\*\s*Dealing Flop\s*\*\*\s*\[\s*([^\]]+)\s*\]', block)
+        turn_match = re.search(r'\*\*\s*Dealing Turn\s*\*\*\s*\[\s*([^\]]+)\s*\]', block)
+        river_match = re.search(r'\*\*\s*Dealing River\s*\*\*\s*\[\s*([^\]]+)\s*\]', block)
+
+        if flop_match:
+            board_cards = flop_match.group(1).replace(',', '').replace(' ', '')
+        if turn_match:
+            board_cards += turn_match.group(1).replace(',', '').replace(' ', '')
+        if river_match:
+            board_cards += river_match.group(1).replace(',', '').replace(' ', '')
+
+        # Pot size
+        pot_match = re.search(r'Total\s+pot\s*\(?\$?(\d+\.?\d*)', block, re.IGNORECASE)
+        pot_size = float(pot_match.group(1)) if pot_match else 0.0
+
+        # Rake
+        rake_match = re.search(r'Rake\s*\$?(\d+\.?\d*)', block, re.IGNORECASE)
+        rake_amount = float(rake_match.group(1)) if rake_match else 0.0
+
+        # Hero result
+        hero_result = 0.0
+        if hero_name:
+            # Выигрыш: "Hero collected [ $X ]" или "Hero wins $X"
+            win_match = re.search(rf'{re.escape(hero_name)}\s+(?:collected|wins)\s*\[?\s*\$?(\d+\.?\d*)', block)
+            if win_match:
+                collected = float(win_match.group(1))
+                invested = self._calculate_invested_888(block, hero_name)
+                hero_result = collected - invested
+            else:
+                hero_result = -self._calculate_invested_888(block, hero_name)
+
+        # Hand history
+        hand_history = self._extract_opponent_data_888(block, hero_name)
+
+        return {
+            "hand_id": hand_id,
+            "table_id": table_id,
+            "limit_type": limit_type,
+            "players_count": players_count,
+            "hero_position": hero_position,
+            "hero_cards": hero_cards,
+            "board_cards": board_cards,
+            "pot_size": pot_size,
+            "rake_amount": rake_amount,
+            "hero_result": hero_result,
+            "hand_history": hand_history
+        }
+
+    def _calculate_invested_888(self, block: str, player_name: str) -> float:
+        """Вычисляет сколько игрок вложил в пот (888poker формат)"""
+        total = 0.0
+
+        # Blinds: "Player posts small blind [$0.05]"
+        sb_match = re.search(rf'{re.escape(player_name)}\s+posts small blind\s*\[\s*\$?(\d+\.?\d*)\s*\]', block)
+        bb_match = re.search(rf'{re.escape(player_name)}\s+posts big blind\s*\[\s*\$?(\d+\.?\d*)\s*\]', block)
+
+        if sb_match:
+            total += float(sb_match.group(1))
+        if bb_match:
+            total += float(bb_match.group(1))
+
+        # Actions: "Player calls [$X]", "Player raises [$X]", "Player bets [$X]"
+        calls = re.findall(rf'{re.escape(player_name)}\s+calls\s*\[\s*\$?(\d+\.?\d*)\s*\]', block)
+        for call in calls:
+            total += float(call)
+
+        bets = re.findall(rf'{re.escape(player_name)}\s+bets\s*\[\s*\$?(\d+\.?\d*)\s*\]', block)
+        for bet in bets:
+            total += float(bet)
+
+        raises = re.findall(rf'{re.escape(player_name)}\s+raises\s*\[\s*\$?(\d+\.?\d*)\s*\]', block)
+        for r in raises:
+            total += float(r)
+
+        return total
+
+    def _extract_opponent_data_888(self, block: str, hero_name: Optional[str]) -> Dict[str, Any]:
+        """Извлекает данные об оппонентах (888poker)"""
+        opponents = {}
+
+        players = re.findall(r'Seat\s+\d+:\s+(\w+)', block)
+
+        for player in players:
+            if player == hero_name:
+                continue
+
+            opponent_data = {
+                "actions": [],
+                "showdown": False,
+                "cards": None
+            }
+
+            # Actions
+            actions = re.findall(
+                rf'{re.escape(player)}\s+(folds|checks|calls|bets|raises)',
+                block, re.IGNORECASE
+            )
+            opponent_data["actions"] = [a.lower() for a in actions]
+
+            # Showdown
+            showdown_match = re.search(rf'{re.escape(player)}\s+shows\s*\[\s*([^\]]+)\s*\]', block)
+            if showdown_match:
+                opponent_data["showdown"] = True
+                opponent_data["cards"] = showdown_match.group(1).replace(',', '').replace(' ', '')
+
+            opponents[player] = opponent_data
+
+        return opponents
 
     def _parse_partypoker(self, content: str) -> List[Dict[str, Any]]:
-        """Парсит PartyPoker hand history (TODO)"""
-        print("Парсер PartyPoker пока не реализован")
-        return []
+        """
+        Парсит PartyPoker hand history
+
+        Формат PartyPoker:
+        ***** Hand History for Game 1234567890 *****
+        $0.05/$0.10 USD NL Texas Hold'em - Monday, January 15, 12:34:56 CET 2024
+        Table TableName (Real Money)
+        Seat 1 is the button
+        Total number of players : 6
+        Seat 1: Player1 ( $10 USD )
+        ...
+        """
+        hands = []
+
+        # Разбиваем на раздачи
+        hand_blocks = re.split(r'\*{5}\s*Hand History for Game', content)
+
+        for block in hand_blocks:
+            if not block.strip():
+                continue
+
+            block = "***** Hand History for Game" + block
+
+            try:
+                hand_data = self._parse_partypoker_hand(block)
+                if hand_data:
+                    hands.append(hand_data)
+            except Exception as e:
+                print(f"Ошибка парсинга PartyPoker раздачи: {e}")
+                continue
+
+        return hands
+
+    def _parse_partypoker_hand(self, block: str) -> Optional[Dict[str, Any]]:
+        """Парсит одну раздачу PartyPoker"""
+
+        # Hand ID
+        hand_id_match = re.search(r'Game\s+(\d+)', block)
+        if not hand_id_match:
+            return None
+        hand_id = f"PP_{hand_id_match.group(1)}"
+
+        # Table ID
+        table_match = re.search(r"Table\s+(\S+)", block)
+        table_id = table_match.group(1) if table_match else "Unknown"
+
+        # Limit type
+        limit_match = re.search(r'\$(\d+\.?\d*)/\$(\d+\.?\d*)\s+USD', block)
+        if limit_match:
+            bb = float(limit_match.group(2))
+            bb_cents = int(bb * 100)
+            if bb_cents <= 2:
+                limit_type = "NL2"
+            elif bb_cents <= 5:
+                limit_type = "NL5"
+            elif bb_cents <= 10:
+                limit_type = "NL10"
+            elif bb_cents <= 25:
+                limit_type = "NL25"
+            elif bb_cents <= 50:
+                limit_type = "NL50"
+            else:
+                limit_type = "NL100"
+        else:
+            limit_type = "NL10"
+
+        # Players count
+        players_match = re.search(r'Total number of players\s*:\s*(\d+)', block)
+        players_count = int(players_match.group(1)) if players_match else 6
+
+        # Hero cards - PartyPoker: "Dealt to Hero [  Ks Qh ]"
+        hero_cards_match = re.search(r'Dealt to (\w+)\s*\[\s*([^\]]+)\s*\]', block)
+        hero_cards = ""
+        hero_name = None
+        if hero_cards_match:
+            hero_name = hero_cards_match.group(1)
+            hero_cards = hero_cards_match.group(2).replace(' ', '')
+
+        # Hero position
+        hero_position = "Unknown"
+        if hero_name:
+            hero_seat_match = re.search(rf'Seat\s+(\d+):\s+{re.escape(hero_name)}', block)
+            if hero_seat_match:
+                seat = int(hero_seat_match.group(1))
+                button_match = re.search(r'Seat\s+(\d+)\s+is the button', block)
+                if button_match:
+                    button_seat = int(button_match.group(1))
+                    positions = ['BTN', 'SB', 'BB', 'UTG', 'MP', 'CO']
+                    offset = (seat - button_seat) % players_count
+                    hero_position = positions[min(offset, len(positions) - 1)]
+
+        # Board cards
+        board_cards = ""
+        flop_match = re.search(r'\*\*\s*Dealing Flop\s*\*\*\s*\[\s*([^\]]+)\s*\]', block)
+        turn_match = re.search(r'\*\*\s*Dealing Turn\s*\*\*\s*\[\s*([^\]]+)\s*\]', block)
+        river_match = re.search(r'\*\*\s*Dealing River\s*\*\*\s*\[\s*([^\]]+)\s*\]', block)
+
+        if flop_match:
+            board_cards = flop_match.group(1).replace(' ', '')
+        if turn_match:
+            board_cards += turn_match.group(1).replace(' ', '')
+        if river_match:
+            board_cards += river_match.group(1).replace(' ', '')
+
+        # Pot size
+        pot_match = re.search(r'Total\s+pot\s*\$?(\d+\.?\d*)', block, re.IGNORECASE)
+        pot_size = float(pot_match.group(1)) if pot_match else 0.0
+
+        # Rake
+        rake_match = re.search(r'Rake\s*\$?(\d+\.?\d*)', block, re.IGNORECASE)
+        rake_amount = float(rake_match.group(1)) if rake_match else 0.0
+
+        # Hero result
+        hero_result = 0.0
+        if hero_name:
+            win_match = re.search(rf'{re.escape(hero_name)}\s+wins\s+\$?(\d+\.?\d*)', block)
+            if win_match:
+                collected = float(win_match.group(1))
+                invested = self._calculate_invested_partypoker(block, hero_name)
+                hero_result = collected - invested
+            else:
+                hero_result = -self._calculate_invested_partypoker(block, hero_name)
+
+        hand_history = self._extract_opponent_data_partypoker(block, hero_name)
+
+        return {
+            "hand_id": hand_id,
+            "table_id": table_id,
+            "limit_type": limit_type,
+            "players_count": players_count,
+            "hero_position": hero_position,
+            "hero_cards": hero_cards,
+            "board_cards": board_cards,
+            "pot_size": pot_size,
+            "rake_amount": rake_amount,
+            "hero_result": hero_result,
+            "hand_history": hand_history
+        }
+
+    def _calculate_invested_partypoker(self, block: str, player_name: str) -> float:
+        """Вычисляет вложения игрока (PartyPoker формат)"""
+        total = 0.0
+
+        # Blinds
+        sb_match = re.search(rf'{re.escape(player_name)}\s+posts small blind\s*\[\s*\$?(\d+\.?\d*)', block)
+        bb_match = re.search(rf'{re.escape(player_name)}\s+posts big blind\s*\[\s*\$?(\d+\.?\d*)', block)
+
+        if sb_match:
+            total += float(sb_match.group(1))
+        if bb_match:
+            total += float(bb_match.group(1))
+
+        # Actions
+        calls = re.findall(rf'{re.escape(player_name)}\s+calls\s*\[\s*\$?(\d+\.?\d*)\s*\]', block)
+        for call in calls:
+            total += float(call)
+
+        bets = re.findall(rf'{re.escape(player_name)}\s+bets\s*\[\s*\$?(\d+\.?\d*)\s*\]', block)
+        for bet in bets:
+            total += float(bet)
+
+        raises = re.findall(rf'{re.escape(player_name)}\s+raises\s*\[\s*\$?(\d+\.?\d*)\s*\]', block)
+        for r in raises:
+            total += float(r)
+
+        return total
+
+    def _extract_opponent_data_partypoker(self, block: str, hero_name: Optional[str]) -> Dict[str, Any]:
+        """Извлекает данные об оппонентах (PartyPoker)"""
+        opponents = {}
+
+        players = re.findall(r'Seat\s+\d+:\s+(\w+)', block)
+
+        for player in players:
+            if player == hero_name:
+                continue
+
+            opponent_data = {
+                "actions": [],
+                "showdown": False,
+                "cards": None
+            }
+
+            actions = re.findall(
+                rf'{re.escape(player)}\s+(folds|checks|calls|bets|raises)',
+                block, re.IGNORECASE
+            )
+            opponent_data["actions"] = [a.lower() for a in actions]
+
+            showdown_match = re.search(rf'{re.escape(player)}\s+shows\s*\[\s*([^\]]+)\s*\]', block)
+            if showdown_match:
+                opponent_data["showdown"] = True
+                opponent_data["cards"] = showdown_match.group(1).replace(' ', '')
+
+            opponents[player] = opponent_data
+
+        return opponents
 
 
 def parse_and_upload(

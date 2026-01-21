@@ -116,9 +116,13 @@ class BotStatsCalculator:
                        if d.final_action in ["raise", "all_in"])
         pfr = (pfr_count / len(preflop_decisions) * 100) if preflop_decisions else 0.0
         
-        # 3-bet процент (упрощенно - рейзы после рейза)
-        three_bet_count = 0  # TODO: более точный расчет
-        three_bet_pct = 0.0
+        # 3-bet процент: рейзы в ответ на рейз оппонента префлоп
+        # Анализируем решения где был facing_raise и бот сделал raise
+        three_bet_opportunities = [d for d in preflop_decisions
+                                   if d.meta and d.meta.get("facing_raise", False)]
+        three_bet_count = sum(1 for d in three_bet_opportunities
+                             if d.final_action in ["raise", "all_in"])
+        three_bet_pct = (three_bet_count / len(three_bet_opportunities) * 100) if three_bet_opportunities else 0.0
         
         # Aggression Factor: (bets + raises) / calls
         postflop_decisions = [d for d in decisions if d.street != "preflop"]
@@ -134,9 +138,19 @@ class BotStatsCalculator:
         
         # Rake
         total_rake = sum(float(hand.rake_amount) for hand in hands)
-        
-        # Rake per hour (упрощенно)
-        hours = 1.0  # TODO: вычислять из периода
+
+        # Rake per hour - вычисляем из периода раздач
+        if len(hands) >= 2:
+            # Берём время от первой до последней раздачи
+            timestamps = sorted([hand.timestamp for hand in hands if hand.timestamp])
+            if timestamps:
+                duration = (timestamps[-1] - timestamps[0]).total_seconds() / 3600
+                hours = max(duration, 0.01)  # Минимум 0.01 часа чтобы избежать деления на 0
+            else:
+                hours = 1.0
+        else:
+            hours = 1.0  # Default для одной раздачи
+
         rake_per_hour = total_rake / hours if hours > 0 else 0.0
         
         # Average pot size

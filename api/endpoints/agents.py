@@ -94,18 +94,44 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                     lag = (datetime.now(timezone.utc) - agent.last_seen).total_seconds() if agent.last_seen else 0
                     agent_heartbeat_lag_seconds.labels(agent_id=agent_id).set(lag)
                     
-                    # Отправляем ответ с командами (если есть)
+                    # Получаем pending команды из метаданных агента
+                    pending_commands = []
+                    if agent.meta and "pending_commands" in agent.meta:
+                        pending_commands = agent.meta["pending_commands"]
+                        # Очищаем очередь после отправки
+                        agent.meta["pending_commands"] = []
+                        db.commit()
+
+                    # Отправляем ответ с командами
                     await websocket.send_json({
                         "type": "heartbeat_ack",
                         "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "commands": []  # TODO: получать команды из очереди
+                        "commands": pending_commands
                     })
                 
                 elif data.get("type") == "command_response":
                     # Агент подтвердил выполнение команды
                     command_id = data.get("command_id")
-                    # TODO: обновить статус команды в БД
-                    pass
+                    command_status = data.get("status", "completed")
+                    command_result = data.get("result")
+
+                    # Сохраняем результат в метаданных агента
+                    agent.meta = agent.meta or {}
+                    if "command_history" not in agent.meta:
+                        agent.meta["command_history"] = []
+
+                    agent.meta["command_history"].append({
+                        "command_id": command_id,
+                        "status": command_status,
+                        "result": command_result,
+                        "completed_at": datetime.now(timezone.utc).isoformat()
+                    })
+
+                    # Храним только последние 50 команд
+                    if len(agent.meta["command_history"]) > 50:
+                        agent.meta["command_history"] = agent.meta["command_history"][-50:]
+
+                    db.commit()
                     
             except WebSocketDisconnect:
                 break
@@ -186,13 +212,18 @@ async def agent_heartbeat_http(
     lag = (datetime.now(timezone.utc) - agent.last_seen).total_seconds() if agent.last_seen else 0
     agent_heartbeat_lag_seconds.labels(agent_id=agent.agent_id).set(lag)
     
-    # Получаем команды для агента (если есть)
-    # TODO: реализовать очередь команд
-    
+    # Получаем команды для агента из очереди в метаданных
+    pending_commands = []
+    if agent.meta and "pending_commands" in agent.meta:
+        pending_commands = agent.meta["pending_commands"]
+        # Очищаем очередь после отправки
+        agent.meta["pending_commands"] = []
+        db.commit()
+
     return AgentHeartbeatResponse(
         status="ok",
         agent_id=agent.agent_id,
-        commands=[]  # TODO: возвращать команды из очереди
+        commands=pending_commands
     )
 
 

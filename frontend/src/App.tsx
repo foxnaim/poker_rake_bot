@@ -17,6 +17,7 @@ import AdminTablesPage from './pages/AdminTablesPage';
 import AdminBotConfigsPage from './pages/AdminBotConfigsPage';
 import AdminRakeModelsPage from './pages/AdminRakeModelsPage';
 import AdminAPIKeysPage from './pages/AdminAPIKeysPage';
+import AdminAgentsPage from './pages/AdminAgentsPage';
 import './App.css';
 
 const App: React.FC = () => {
@@ -38,6 +39,7 @@ const App: React.FC = () => {
             <Route path="/admin/rake-models" element={<AdminRakeModelsPage />} />
             <Route path="/admin/api-keys" element={<AdminAPIKeysPage />} />
             <Route path="/admin/sessions" element={<AdminSessionsPage />} />
+            <Route path="/admin/agents" element={<AdminAgentsPage />} />
           </Routes>
         </main>
       </div>

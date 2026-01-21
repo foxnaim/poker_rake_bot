@@ -12,6 +12,38 @@ from data.database import get_db
 router = APIRouter(prefix="/api/v1", tags=["sessions"])
 
 
+def parse_big_blind(limit_type: str) -> float:
+    """
+    Парсит big blind из limit_type строки.
+
+    Примеры:
+        NL10 -> 0.10
+        NL25 -> 0.25
+        NL50 -> 0.50
+        NL100 -> 1.00
+        NL200 -> 2.00
+        NL500 -> 5.00
+
+    Args:
+        limit_type: Строка лимита (NL10, NL25, etc.)
+
+    Returns:
+        Размер big blind в долларах
+    """
+    if not limit_type:
+        return 1.0  # Default
+
+    # Извлекаем числовую часть
+    import re
+    match = re.search(r'(\d+)', limit_type)
+    if match:
+        limit_value = int(match.group(1))
+        # NL10 = $0.05/$0.10, NL25 = $0.10/$0.25, etc.
+        return limit_value / 100.0
+
+    return 1.0  # Default fallback
+
+
 @router.post("/session/start", response_model=SessionStartResponse)
 async def start_session(
     request: SessionCreate,
@@ -106,7 +138,7 @@ async def end_session(
         total_pot = sum(float(h.pot_size) for h in hands)
 
         # Вычисляем bb/100
-        big_blind = 1.0  # Для NL10 (TODO: получать из limit_type)
+        big_blind = parse_big_blind(session.limit_type)
         if session.hands_played > 0:
             session.winrate_bb_100 = (total_profit / session.hands_played) * 100 / big_blind
             session.profit_bb_100 = (total_profit / session.hands_played) * 100 / big_blind
@@ -143,7 +175,7 @@ async def end_session(
         session.hands_played = request.hands_played
     if request.total_profit is not None:
         if session.hands_played > 0:
-            big_blind = 1.0
+            big_blind = parse_big_blind(session.limit_type)
             session.winrate_bb_100 = (request.total_profit / session.hands_played) * 100 / big_blind
 
     db.commit()
@@ -202,7 +234,7 @@ async def get_session(
             total_rake = sum(float(h.rake_amount) for h in hands)
             total_pot = sum(float(h.pot_size) for h in hands)
             
-            big_blind = 1.0  # TODO: получать из limit_type
+            big_blind = parse_big_blind(session.limit_type)
             if session.hands_played > 0:
                 session.winrate_bb_100 = (total_profit / session.hands_played) * 100 / big_blind
                 session.profit_bb_100 = (total_profit / session.hands_played) * 100 / big_blind

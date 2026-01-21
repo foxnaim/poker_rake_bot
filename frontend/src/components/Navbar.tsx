@@ -85,11 +85,17 @@ const Navbar: React.FC = () => {
         >
           ⚡ Sessions
         </Link>
-        <Link 
-          to="/admin/api-keys" 
+        <Link
+          to="/admin/api-keys"
           style={{...linkStyle, ...(isActive('/admin/api-keys') ? activeLinkStyle : {})}}
         >
           🔑 API Keys
+        </Link>
+        <Link
+          to="/admin/agents"
+          style={{...linkStyle, ...(isActive('/admin/agents') ? activeLinkStyle : {})}}
+        >
+          🖥️ Agents
         </Link>
       </div>
     </nav>

@@ -11,6 +11,10 @@ from api.metrics import (
     bot_hands_played_total, bot_rake_per_hour, decision_latency_seconds
 )
 
+# Для расчёта requests_per_sec
+_last_request_count = 0
+_last_request_time = None
+
 
 class ConnectionManager:
     """Менеджер WebSocket подключений"""
@@ -73,6 +77,8 @@ async def websocket_endpoint(websocket: WebSocket):
         }, websocket)
         
         # Периодически отправляем статистику
+        global _last_request_count, _last_request_time
+
         while True:
             # Собираем метрики из Prometheus
             from api.metrics import (
@@ -80,7 +86,21 @@ async def websocket_endpoint(websocket: WebSocket):
                 decision_latency_seconds, http_requests_total,
                 get_metric_value
             )
-            
+
+            # Вычисляем requests_per_sec через rate (delta за интервал)
+            current_time = datetime.utcnow()
+            current_request_count = get_metric_value(http_requests_total, {})
+
+            requests_per_sec = 0.0
+            if _last_request_time is not None:
+                elapsed_seconds = (current_time - _last_request_time).total_seconds()
+                if elapsed_seconds > 0:
+                    delta_requests = current_request_count - _last_request_count
+                    requests_per_sec = delta_requests / elapsed_seconds
+
+            _last_request_count = current_request_count
+            _last_request_time = current_time
+
             # Получаем значения метрик
             stats = {
                 "type": "stats",
@@ -90,10 +110,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     "winrate_nl50": get_metric_value(bot_winrate_bb_100, {"limit_type": "NL50", "session_id": "default"}),
                     "hands_per_hour": int(get_metric_value(bot_hands_played_total, {"limit_type": "NL10", "session_id": "default"})),
                     "avg_latency_ms": int(get_metric_value(decision_latency_seconds, {"limit_type": "NL10", "street": "preflop"}) * 1000),
-                    "requests_per_sec": 0  # TODO: вычислить из http_requests_total (требует дополнительной логики для rate)
+                    "requests_per_sec": round(requests_per_sec, 2)
                 }
             }
-            
+
             await manager.send_personal_message(stats, websocket)
             await asyncio.sleep(5)  # Обновление каждые 5 секунд
     

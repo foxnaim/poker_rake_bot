@@ -34,9 +34,14 @@ async def log_hand_endpoint(
         # Если rake_amount передан, используем его, иначе вычисляем
         calculated_rake = request.rake_amount
         if calculated_rake is None or calculated_rake == 0:
-            # Получаем room_id из table_id (если возможно)
-            # Для упрощения используем только limit_type
-            room_id = None  # TODO: получать room_id из table_id через Table
+            # Получаем room_id из table_id через Table
+            room_id = None
+            if request.table_id:
+                from data.models import Table
+                table = db.query(Table).filter(Table.id == request.table_id).first()
+                if table:
+                    room_id = table.room_id
+
             calculated_rake = calculate_rake(
                 pot_size=request.pot_size,
                 room_id=room_id,
@@ -164,7 +169,14 @@ async def log_hands_bulk(
             # Вычисляем рейк по модели (если не передан явно)
             calculated_rake = hand_data.rake_amount
             if calculated_rake is None or calculated_rake == 0:
-                room_id = None  # TODO: получать room_id из table_id
+                # Получаем room_id из table_id через Table
+                room_id = None
+                if hand_data.table_id:
+                    from data.models import Table
+                    table = db.query(Table).filter(Table.id == hand_data.table_id).first()
+                    if table:
+                        room_id = table.room_id
+
                 calculated_rake = calculate_rake(
                     pot_size=hand_data.pot_size,
                     room_id=room_id,

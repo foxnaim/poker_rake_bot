@@ -9,7 +9,17 @@ from typing import Optional
 
 from .connection import ConnectionConfig
 from .agent import TableAgent, AgentConfig, AgentState
-from .action_executor import DummyExecutor, TableLayout
+from .action_executor import DummyExecutor, PyAutoGUIExecutor, ADBExecutor, TableLayout
+
+# Screen Reader (опционально)
+try:
+    from .screen_reader import PILScreenReader, MockScreenReader, LAYOUTS
+    SCREEN_READER_AVAILABLE = True
+except ImportError:
+    SCREEN_READER_AVAILABLE = False
+    PILScreenReader = None
+    MockScreenReader = None
+    LAYOUTS = {}
 
 
 class TableAgentRunner:
@@ -20,7 +30,10 @@ class TableAgentRunner:
         api_url: str,
         bot_id: str,
         limit_type: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        executor_type: str = "dummy",
+        room: str = "pokerking",
+        use_screen_reader: bool = False
     ):
         self.conn_config = ConnectionConfig(
             api_url=api_url,
@@ -34,8 +47,72 @@ class TableAgentRunner:
         )
 
         self.agent: Optional[TableAgent] = None
-        self.executor = DummyExecutor()
         self.running = False
+        self.room = room
+        self.use_screen_reader = use_screen_reader
+
+        # Создаём executor на основе типа
+        layout = self._get_layout(room)
+        self.executor = self._create_executor(executor_type, layout)
+
+        # Screen reader (если включен)
+        self.screen_reader = None
+        if use_screen_reader and SCREEN_READER_AVAILABLE:
+            room_layout = LAYOUTS.get(room, {})
+            self.screen_reader = PILScreenReader(room_layout)
+            print(f"Screen reader enabled for {room}")
+
+    def _get_layout(self, room: str) -> TableLayout:
+        """Получить layout кнопок для рума"""
+        from .action_executor import ClickPosition
+
+        # Примерные позиции кнопок для разных румов
+        layouts = {
+            "pokerking": TableLayout(
+                fold_button=ClickPosition(500, 600, 80, 30),
+                check_button=ClickPosition(620, 600, 80, 30),
+                call_button=ClickPosition(620, 600, 80, 30),
+                bet_button=ClickPosition(740, 600, 80, 30),
+                raise_button=ClickPosition(740, 600, 80, 30),
+                all_in_button=ClickPosition(860, 600, 80, 30),
+                bet_input=ClickPosition(700, 550, 100, 25),
+                confirm_button=ClickPosition(740, 600, 80, 30)
+            ),
+            "pokerstars": TableLayout(
+                fold_button=ClickPosition(450, 650, 90, 35),
+                check_button=ClickPosition(580, 650, 90, 35),
+                call_button=ClickPosition(580, 650, 90, 35),
+                bet_button=ClickPosition(710, 650, 90, 35),
+                raise_button=ClickPosition(710, 650, 90, 35),
+                all_in_button=ClickPosition(840, 650, 90, 35),
+                bet_input=ClickPosition(680, 600, 110, 28),
+                confirm_button=ClickPosition(710, 650, 90, 35)
+            ),
+            "888poker": TableLayout(
+                fold_button=ClickPosition(480, 620, 85, 32),
+                check_button=ClickPosition(600, 620, 85, 32),
+                call_button=ClickPosition(600, 620, 85, 32),
+                bet_button=ClickPosition(720, 620, 85, 32),
+                raise_button=ClickPosition(720, 620, 85, 32),
+                all_in_button=ClickPosition(840, 620, 85, 32),
+                bet_input=ClickPosition(690, 570, 105, 26),
+                confirm_button=ClickPosition(720, 620, 85, 32)
+            )
+        }
+        return layouts.get(room, TableLayout())
+
+    def _create_executor(self, executor_type: str, layout: TableLayout):
+        """Создать executor нужного типа"""
+        if executor_type == "pyautogui":
+            try:
+                return PyAutoGUIExecutor(layout)
+            except ImportError:
+                print("PyAutoGUI not installed, falling back to dummy")
+                return DummyExecutor(layout)
+        elif executor_type == "adb":
+            return ADBExecutor(layout)
+        else:
+            return DummyExecutor(layout)
 
     async def start(self):
         """Запустить агента"""
@@ -183,6 +260,11 @@ def main():
     parser.add_argument("--limit", default="NL10", help="Limit type (NL10, NL50)")
     parser.add_argument("--key", help="API key")
     parser.add_argument("--interactive", "-i", action="store_true", help="Interactive mode")
+    parser.add_argument("--executor", choices=["dummy", "pyautogui", "adb"], default="dummy",
+                        help="Action executor type")
+    parser.add_argument("--room", choices=["pokerking", "pokerstars", "888poker"], default="pokerking",
+                        help="Poker room for screen reader layout")
+    parser.add_argument("--screen-reader", action="store_true", help="Enable screen reader mode")
 
     args = parser.parse_args()
 
@@ -190,7 +272,10 @@ def main():
         api_url=args.api,
         bot_id=args.bot,
         limit_type=args.limit,
-        api_key=args.key
+        api_key=args.key,
+        executor_type=args.executor,
+        room=args.room,
+        use_screen_reader=args.screen_reader
     )
 
     async def run():
