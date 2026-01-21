@@ -175,6 +175,8 @@ class Table(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     room_id = Column(Integer, ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False, index=True)
+    # Внешний ID стола (как его видит агент/логика: "table_1", "pp_123", etc.)
+    external_table_id = Column(String(100), nullable=True, index=True)
     limit_type = Column(String(20), nullable=False, index=True)
     max_players = Column(Integer, nullable=False, default=6)
     meta = Column(JSON, nullable=True)
@@ -184,6 +186,14 @@ class Table(Base):
     # Relationships
     room = relationship("Room", back_populates="tables")
     sessions = relationship("BotSession", back_populates="table", cascade="all, delete-orphan")
+
+    @property
+    def table_key(self) -> Optional[str]:
+        """
+        Человеко/agent-friendly идентификатор стола для UI.
+        (Храним в БД как external_table_id, чтобы не путать с PK id.)
+        """
+        return self.external_table_id
 
 
 class RakeModel(Base):
@@ -221,7 +231,8 @@ class BotConfig(Base):
     exploit_weights = Column(JSON, nullable=False, default={"preflop": 0.3, "flop": 0.4, "turn": 0.5, "river": 0.6})
     max_winrate_cap = Column(Numeric(6, 2), nullable=True)
     anti_pattern_params = Column(JSON, nullable=True)
-    limit_types = Column(ARRAY(String), nullable=True)
+    # ARRAY в Postgres, JSON в sqlite (для локального режима "без докера"/тестов).
+    limit_types = Column(ARRAY(String).with_variant(JSON, "sqlite"), nullable=True)
     is_default = Column(Boolean, default=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -260,6 +271,17 @@ class BotSession(Base):
     hands = relationship("Hand", back_populates="session")
     decisions = relationship("DecisionLog", back_populates="session")
     agents = relationship("Agent", back_populates="assigned_session")
+
+    @property
+    def table_key(self) -> Optional[str]:
+        """
+        Human/agent-friendly идентификатор стола для UI.
+        Берём из связанного Table.external_table_id.
+        """
+        try:
+            return self.table.external_table_id if self.table is not None else None
+        except Exception:
+            return None
 
 
 class Agent(Base):

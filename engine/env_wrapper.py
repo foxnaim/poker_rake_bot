@@ -3,7 +3,11 @@
 import random
 from typing import List, Dict, Optional, Tuple
 from enum import IntEnum
-import numpy as np
+# numpy используется в некоторых ветках/экспериментах, но не обязателен для базовой логики.
+try:
+    import numpy as np  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
+    np = None
 
 from .cards import Suit, Rank, card_to_string, parse_cards, cards_to_string
 from .hand_evaluator import evaluate_hand, compare_hands

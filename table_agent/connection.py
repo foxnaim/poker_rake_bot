@@ -15,7 +15,7 @@ class ConnectionConfig:
     """Конфигурация подключения"""
     api_url: str = "http://localhost:8000"
     api_key: Optional[str] = None
-    api_secret: Optional[str] = None
+    api_secret: Optional[str] = None  # используется как "флаг" включения HMAC (см. _get_headers)
     timeout: float = 5.0
     retry_count: int = 3
     retry_delay: float = 0.5
@@ -57,22 +57,29 @@ class BackendConnection:
     def is_connected(self) -> bool:
         return self._connected and self.session is not None
 
-    def _get_headers(self, body: str = "") -> Dict[str, str]:
-        """Получить заголовки с аутентификацией"""
+    def _get_headers(self, body: str = "", method: str = "GET", path: str = "/") -> Dict[str, str]:
+        """Получить заголовки с аутентификацией.
+
+        Важно: backend HMAC сейчас проверяет подпись, вычисленную на основе:
+        message = f\"{method}{path}{nonce}{timestamp}{body}\"
+        key = X-API-Key
+        Поэтому здесь используем api_key как ключ (а api_secret трактуем как флаг 'HMAC enabled').
+        """
         headers = {"Content-Type": "application/json"}
 
         if self.config.api_key:
             headers["X-API-Key"] = self.config.api_key
 
-        if self.config.api_secret:
+        # HMAC включаем если задан api_secret (как флаг) И есть api_key
+        if self.config.api_secret and self.config.api_key:
             timestamp = str(int(time.time()))
             nonce = hashlib.md5(f"{timestamp}{body}".encode()).hexdigest()[:16]
 
-            message = f"{timestamp}{nonce}{body}"
+            message = f"{method}{path}{nonce}{timestamp}{body}"
             signature = hmac.new(
-                self.config.api_secret.encode(),
-                message.encode(),
-                hashlib.sha256
+                self.config.api_key.encode("utf-8"),
+                message.encode("utf-8"),
+                hashlib.sha256,
             ).hexdigest()
 
             headers["X-Timestamp"] = timestamp
@@ -86,8 +93,9 @@ class BackendConnection:
         if not self.is_connected:
             return None
 
-        body = json.dumps(game_state)
-        headers = self._get_headers(body)
+        # Если включен HMAC — backend ожидает сортировку ключей в body (см. api/endpoints/decide.py)
+        body = json.dumps(game_state, sort_keys=bool(self.config.api_secret))
+        headers = self._get_headers(body, method="POST", path="/api/v1/decide")
 
         for attempt in range(self.config.retry_count):
             try:
@@ -117,7 +125,7 @@ class BackendConnection:
             return False
 
         body = json.dumps(hand_data)
-        headers = self._get_headers(body)
+        headers = self._get_headers(body, method="POST", path="/api/v1/log_hand")
 
         try:
             async with self.session.post(
@@ -136,7 +144,7 @@ class BackendConnection:
             return False
 
         body = json.dumps({"session_id": session_id, "limit_type": limit_type})
-        headers = self._get_headers(body)
+        headers = self._get_headers(body, method="POST", path="/api/v1/session/start")
 
         try:
             async with self.session.post(
@@ -155,7 +163,7 @@ class BackendConnection:
             return False
 
         body = json.dumps({"session_id": session_id})
-        headers = self._get_headers(body)
+        headers = self._get_headers(body, method="POST", path="/api/v1/session/end")
 
         try:
             async with self.session.post(
@@ -167,3 +175,32 @@ class BackendConnection:
         except Exception as e:
             print(f"End session error: {e}")
             return False
+
+    async def heartbeat(self, agent_id: str, session_id: Optional[str], status: str = "online",
+                        version: Optional[str] = None, errors: Optional[list] = None) -> Optional[Dict[str, Any]]:
+        """HTTP heartbeat (fallback) для agent protocol."""
+        if not self.is_connected:
+            return None
+
+        payload = {
+            "agent_id": agent_id,
+            "session_id": session_id,
+            "status": status,
+            "version": version,
+            "errors": errors,
+        }
+        body = json.dumps(payload)
+        headers = self._get_headers(body, method="POST", path="/api/v1/agent/heartbeat")
+
+        try:
+            async with self.session.post(
+                f"{self.config.api_url}/api/v1/agent/heartbeat",
+                data=body,
+                headers=headers,
+            ) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+                return None
+        except Exception as e:
+            print(f"Heartbeat error: {e}")
+            return None

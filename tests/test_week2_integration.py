@@ -5,6 +5,7 @@
 
 import pytest
 from sqlalchemy.orm import Session
+fastapi = pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from data.database import SessionLocal, init_db

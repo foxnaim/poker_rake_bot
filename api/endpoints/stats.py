@@ -19,6 +19,36 @@ from data.database import get_db
 router = APIRouter(prefix="/api/v1", tags=["stats"])
 
 
+def _resolve_table_key(db: Session, table_id: Optional[str]) -> Optional[str]:
+    """
+    Приводит table_id к table_key (Table.external_table_id), если возможно.
+    Иначе возвращает исходное значение.
+    """
+    if not table_id:
+        return None
+
+    table_id_str = str(table_id)
+
+    try:
+        from data.models import Table
+        # 1) Если прилетел PK в виде числа -> ищем Table.id
+        try:
+            pk = int(table_id_str)
+        except (TypeError, ValueError):
+            pk = None
+
+        table = None
+        if pk is not None:
+            table = db.query(Table).filter(Table.id == pk).first()
+        # 2) Иначе/дополнительно пробуем как external_table_id
+        if table is None:
+            table = db.query(Table).filter(Table.external_table_id == table_id_str).first()
+
+        return table.external_table_id if table and table.external_table_id else table_id_str
+    except Exception:
+        return table_id_str
+
+
 @router.get("/stats", response_model=StatsResponse)
 async def get_stats(
     db: Session = Depends(get_db)
@@ -33,15 +63,25 @@ async def get_stats(
     - Количество активных чекпоинтов
     - Uptime
     """
-    from data.models import Hand, DecisionLog, OpponentProfile, BotStats
+    from data.models import Hand, DecisionLog, OpponentProfile, BotStats, BotSession
 
     total_hands = db.query(func.count(Hand.id)).scalar() or 0
     total_decisions = db.query(func.count(DecisionLog.id)).scalar() or 0
     total_opponents = db.query(func.count(OpponentProfile.id)).scalar() or 0
 
-    # Сессии (bot_stats)
-    total_sessions = db.query(func.count(BotStats.id)).scalar() or 0
-    active_sessions = db.query(func.count(BotStats.id)).filter(BotStats.period_end.is_(None)).scalar() or 0
+    # Сессии:
+    # - control-plane (bot_sessions) — основной контур
+    total_control_sessions = db.query(func.count(BotSession.id)).scalar() or 0
+    active_control_sessions = db.query(func.count(BotSession.id)).filter(
+        BotSession.status.in_(["starting", "running", "paused"])
+    ).scalar() or 0
+    # - legacy (bot_stats) — оставляем для совместимости/диагностики
+    total_legacy_sessions = db.query(func.count(BotStats.id)).scalar() or 0
+    active_legacy_sessions = db.query(func.count(BotStats.id)).filter(BotStats.period_end.is_(None)).scalar() or 0
+
+    # Для обратной совместимости поля total_sessions/active_sessions считаем по control-plane
+    total_sessions = total_control_sessions
+    active_sessions = active_control_sessions
 
     # Финансовые агрегаты (из hands)
     total_profit = db.query(func.sum(Hand.hero_result)).scalar()
@@ -74,6 +114,10 @@ async def get_stats(
         total_decisions=total_decisions,
         total_sessions=total_sessions,
         active_sessions=active_sessions,
+        total_control_sessions=total_control_sessions,
+        active_control_sessions=active_control_sessions,
+        total_legacy_sessions=total_legacy_sessions,
+        active_legacy_sessions=active_legacy_sessions,
         total_opponents=total_opponents,
         active_checkpoints=active_checkpoints,
         total_profit=total_profit,
@@ -191,7 +235,26 @@ async def get_recent_hands(
     query = db.query(Hand)
 
     if table_id:
-        query = query.filter(Hand.table_id == table_id)
+        # Поддерживаем фильтр как по PK (строкой), так и по table_key (external_table_id)
+        candidates = {str(table_id)}
+        try:
+            from data.models import Table
+            # a) если фильтр = число -> добавим external_table_id этого стола
+            try:
+                pk = int(str(table_id))
+            except (TypeError, ValueError):
+                pk = None
+            if pk is not None:
+                t = db.query(Table).filter(Table.id == pk).first()
+                if t and t.external_table_id:
+                    candidates.add(t.external_table_id)
+            # b) если фильтр = external_table_id -> добавим str(id) чтобы матчить старые логи
+            t2 = db.query(Table).filter(Table.external_table_id == str(table_id)).first()
+            if t2:
+                candidates.add(str(t2.id))
+        except Exception:
+            pass
+        query = query.filter(Hand.table_id.in_(list(candidates)))
 
     query = query.order_by(desc(Hand.created_at))
 
@@ -202,6 +265,7 @@ async def get_recent_hands(
             id=h.id,
             hand_id=h.hand_id,
             table_id=h.table_id,
+            table_key=_resolve_table_key(db, h.table_id),
             limit_type=h.limit_type,
             result=float(h.hero_result) if h.hero_result else None,
             pot_size=float(h.pot_size) if h.pot_size else None,
@@ -247,6 +311,10 @@ async def get_decision_history(
             id=d.id,
             hand_id=d.hand_id,
             table_id=d.game_state.get("table_id") if isinstance(d.game_state, dict) else None,
+            table_key=_resolve_table_key(
+                db,
+                (d.game_state.get("table_id") if isinstance(d.game_state, dict) else None),
+            ),
             street=d.street,
             action=d.final_action,
             amount=float(d.action_amount) if d.action_amount else None,

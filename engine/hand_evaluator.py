@@ -3,7 +3,7 @@
 Поддерживает работу с numba (если установлен) и без него.
 """
 
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Callable, Dict, Any
 from functools import wraps
 
 # Попытка импорта numba (опционально)
@@ -345,3 +345,45 @@ def compare_hands(hand1: List[Tuple[int, int]], hand2: List[Tuple[int, int]]) ->
         return -1
     else:
         return 0
+
+
+class HandEvaluator:
+    """
+    Совместимый интерфейс для старых тестов/кода.
+
+    Ожидаемый вход: список карт в строковом формате, например:
+        ["Ah", "Ad", "Ac", "Ks", "Kh"]
+    """
+
+    RANK_NAMES: Dict[int, str] = {
+        8: "Straight Flush",
+        7: "Four of a Kind",
+        6: "Full House",
+        5: "Flush",
+        4: "Straight",
+        3: "Three of a Kind",
+        2: "Two Pair",
+        1: "Pair",
+        0: "High Card",
+    }
+
+    def evaluate(self, cards: List[str]) -> Dict[str, Any]:
+        from engine.cards import string_to_card
+
+        parsed = [string_to_card(c) for c in cards]
+        score = evaluate_hand(parsed)
+
+        category = score // 1_000_000
+        if category >= 8:
+            # Royal Flush = A-high straight flush
+            straight_high = score - 8_000_000
+            rank_name = "Royal Flush" if straight_high == 14 else "Straight Flush"
+            category = 8
+        else:
+            rank_name = self.RANK_NAMES.get(int(category), "High Card")
+
+        return {
+            "score": int(score),
+            "rank": int(category),
+            "rank_name": rank_name,
+        }

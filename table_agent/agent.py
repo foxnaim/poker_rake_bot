@@ -25,6 +25,7 @@ class AgentConfig:
     """Конфигурация агента"""
     bot_id: str = "bot_1"
     limit_type: str = "NL10"
+    table_key: Optional[str] = None  # если задан, всегда подставляем как table_id в API
     default_action: str = "fold"  # действие при ошибке
     action_timeout_ms: int = 800  # макс время на решение
     min_delay_ms: int = 300  # мин задержка перед действием
@@ -45,9 +46,12 @@ class TableAgent:
         self.parser = parser or JSONGameStateParser()
 
         self.state = AgentState.IDLE
+        self.agent_id: str = f"agent_{self.config.bot_id}_{uuid.uuid4().hex[:8]}"
         self.session_id: Optional[str] = None
         self.hands_played = 0
         self.errors_count = 0
+        self.paused = False
+        self._heartbeat_task: Optional[asyncio.Task] = None
 
         # Callbacks
         self._on_decision: Optional[Callable[[str, float], None]] = None
@@ -88,11 +92,16 @@ class TableAgent:
             return False
 
         self._set_state(AgentState.WAITING)
-        print(f"Agent started. Session: {self.session_id}")
+        # Стартуем heartbeat loop (agent protocol)
+        self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+        print(f"Agent started. AgentID: {self.agent_id} Session: {self.session_id}")
         return True
 
     async def stop(self):
         """Остановить агента"""
+        if self._heartbeat_task:
+            self._heartbeat_task.cancel()
+            self._heartbeat_task = None
         if self.session_id:
             await self.connection.end_session(self.session_id)
 
@@ -102,6 +111,8 @@ class TableAgent:
 
     async def process_game_state(self, raw_state: Any) -> Optional[Dict[str, Any]]:
         """Обработать состояние игры и получить решение"""
+        if self.paused:
+            return None
         if self.state not in [AgentState.WAITING, AgentState.PLAYING]:
             return None
 
@@ -121,6 +132,12 @@ class TableAgent:
 
             # Получаем решение
             api_state = parsed.to_api_format()
+            # Канонизируем table_id -> table_key (если задано конфигом)
+            if self.config.table_key:
+                api_state["table_id"] = self.config.table_key
+            # Привязка к backend-сессии + лимиту (важно для логов/статистики)
+            api_state["session_id"] = self.session_id
+            api_state["limit_type"] = self.config.limit_type
             decision = await self.connection.decide(api_state)
 
             elapsed_ms = (time.time() - start_time) * 1000
@@ -173,17 +190,57 @@ class TableAgent:
     async def log_hand_result(self, hand_data: Dict[str, Any]) -> bool:
         """Записать результат раздачи"""
         hand_data["session_id"] = self.session_id
+        if self.config.table_key:
+            hand_data["table_id"] = self.config.table_key
         return await self.connection.log_hand(hand_data)
 
     def get_stats(self) -> Dict[str, Any]:
         """Получить статистику агента"""
         return {
+            "agent_id": self.agent_id,
             "session_id": self.session_id,
             "state": self.state.value,
+            "paused": self.paused,
             "hands_played": self.hands_played,
             "errors_count": self.errors_count,
             "connected": self.connection.is_connected
         }
+
+    async def _heartbeat_loop(self):
+        """Периодический heartbeat + получение команд от backend."""
+        while True:
+            try:
+                resp = await self.connection.heartbeat(
+                    agent_id=self.agent_id,
+                    session_id=self.session_id,
+                    status=("paused" if self.paused else "online"),
+                    version=None,
+                    errors=None,
+                )
+                if resp and isinstance(resp, dict):
+                    cmds = resp.get("commands") or []
+                    for cmd in cmds:
+                        await self._apply_command(cmd)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                self.errors_count += 1
+                if self._on_error:
+                    self._on_error(f"heartbeat_error: {e}")
+            await asyncio.sleep(5)
+
+    async def _apply_command(self, cmd: Dict[str, Any]):
+        """Применить команду, пришедшую от backend."""
+        name = (cmd.get("command") or "").lower()
+        if name == "pause":
+            self.paused = True
+        elif name == "resume":
+            self.paused = False
+        elif name in ("sit_out",):
+            self.paused = True
+        elif name == "stop":
+            # Останов асинхронно, чтобы не ломать loop
+            asyncio.create_task(self.stop())
 
 
 async def main():

@@ -16,6 +16,37 @@ from typing import List, Optional
 router = APIRouter(prefix="/api/v1", tags=["hands"])
 
 
+def _canonical_table_id(db: Session, table_id_in: Optional[str]) -> Optional[str]:
+    """
+    Приводит входной table_id к каноническому table_key (Table.external_table_id), если возможно.
+    Если не удалось — возвращает исходное значение (как строку).
+    """
+    if not table_id_in:
+        return None
+
+    from data.models import Table
+
+    table_id_str = str(table_id_in)
+    table = None
+
+    # 1) internal PK (если прилетело число)
+    try:
+        pk = int(table_id_str)
+    except (TypeError, ValueError):
+        pk = None
+    if pk is not None:
+        table = db.query(Table).filter(Table.id == pk).first()
+
+    # 2) external_table_id
+    if table is None:
+        table = db.query(Table).filter(Table.external_table_id == table_id_str).first()
+
+    if table and table.external_table_id:
+        return table.external_table_id
+
+    return table_id_str
+
+
 @router.post("/log_hand", response_model=HandLogResponse)
 async def log_hand_endpoint(
     request: HandLogRequest,
@@ -30,15 +61,28 @@ async def log_hand_endpoint(
     - Профили оппонентов (через Opponent Profiler)
     """
     try:
+        table_id_in = getattr(request, "table_key", None) or request.table_id
+        canonical_table_id = _canonical_table_id(db, table_id_in)
+
         # Вычисляем рейк по модели (если не передан явно)
         # Если rake_amount передан, используем его, иначе вычисляем
         calculated_rake = request.rake_amount
         if calculated_rake is None or calculated_rake == 0:
-            # Получаем room_id из table_id через Table
+            # Получаем room_id из table_id через Table (по internal id или external_table_id)
             room_id = None
-            if request.table_id:
+            if table_id_in:
                 from data.models import Table
-                table = db.query(Table).filter(Table.id == request.table_id).first()
+                table = None
+                # 1) internal PK (если прилетел int)
+                try:
+                    table_pk = int(str(table_id_in))
+                except (TypeError, ValueError):
+                    table_pk = None
+                if table_pk is not None:
+                    table = db.query(Table).filter(Table.id == table_pk).first()
+                # 2) external_table_id (если PK не подошёл)
+                if table is None:
+                    table = db.query(Table).filter(Table.external_table_id == str(table_id_in)).first()
                 if table:
                     room_id = table.room_id
 
@@ -61,7 +105,7 @@ async def log_hand_endpoint(
         existing = db.query(Hand).filter(Hand.hand_id == request.hand_id).first()
         if existing:
             # idempotent update (полезно для тестов/повторной загрузки логов)
-            existing.table_id = request.table_id
+            existing.table_id = canonical_table_id or str(table_id_in)
             existing.limit_type = request.limit_type
             existing.session_id = session_id_int
             existing.players_count = request.players_count
@@ -77,7 +121,7 @@ async def log_hand_endpoint(
         else:
             hand = Hand(
                 hand_id=request.hand_id,
-                table_id=request.table_id,
+                table_id=canonical_table_id or str(table_id_in),
                 limit_type=request.limit_type,
                 session_id=session_id_int,
                 players_count=request.players_count,
@@ -120,12 +164,13 @@ async def log_hand_endpoint(
         # Отправляем через WebSocket
         await broadcast_hand_result({
             "hand_id": request.hand_id,
+            "table_key": canonical_table_id or str(table_id_in),
             "pot_size": request.pot_size,
             "hero_result": request.hero_result,
             "limit_type": request.limit_type
         })
         
-        return {"status": "logged", "hand_id": request.hand_id}
+        return {"status": "logged", "hand_id": request.hand_id, "table_key": canonical_table_id or str(table_id_in)}
 
     except Exception as e:
         db.rollback()
@@ -166,14 +211,25 @@ async def log_hands_bulk(
                     })
                 continue
 
+            table_id_in = getattr(hand_data, "table_key", None) or hand_data.table_id
+            canonical_table_id = _canonical_table_id(db, table_id_in)
+
             # Вычисляем рейк по модели (если не передан явно)
             calculated_rake = hand_data.rake_amount
             if calculated_rake is None or calculated_rake == 0:
-                # Получаем room_id из table_id через Table
+                # Получаем room_id из table_id через Table (по internal id или external_table_id)
                 room_id = None
-                if hand_data.table_id:
+                if table_id_in:
                     from data.models import Table
-                    table = db.query(Table).filter(Table.id == hand_data.table_id).first()
+                    table = None
+                    try:
+                        table_pk = int(str(table_id_in))
+                    except (TypeError, ValueError):
+                        table_pk = None
+                    if table_pk is not None:
+                        table = db.query(Table).filter(Table.id == table_pk).first()
+                    if table is None:
+                        table = db.query(Table).filter(Table.external_table_id == str(table_id_in)).first()
                     if table:
                         room_id = table.room_id
 
@@ -195,7 +251,7 @@ async def log_hands_bulk(
             # Создаем раздачу
             hand = Hand(
                 hand_id=hand_data.hand_id,
-                table_id=hand_data.table_id,
+                table_id=canonical_table_id or str(table_id_in),
                 limit_type=hand_data.limit_type,
                 session_id=session_id_int,
                 players_count=hand_data.players_count,

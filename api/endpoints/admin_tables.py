@@ -17,6 +17,10 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin", "tables"])
 class TableCreate(BaseModel):
     """Создание стола"""
     room_id: int
+    # для UI/агента: строковый ключ стола (например "table_1", "pp_123")
+    table_key: Optional[str] = None
+    # backward-compat: если кто-то уже шлёт external_table_id
+    external_table_id: Optional[str] = None
     limit_type: str
     max_players: int = 6
     meta: Optional[dict] = None
@@ -24,6 +28,8 @@ class TableCreate(BaseModel):
 
 class TableUpdate(BaseModel):
     """Обновление стола"""
+    table_key: Optional[str] = None
+    external_table_id: Optional[str] = None
     limit_type: Optional[str] = None
     max_players: Optional[int] = None
     meta: Optional[dict] = None
@@ -33,6 +39,7 @@ class TableResponse(BaseModel):
     """Ответ со столом"""
     id: int
     room_id: int
+    table_key: Optional[str]
     limit_type: str
     max_players: int
     meta: Optional[dict]
@@ -69,8 +76,22 @@ async def create_table(
             detail=f"Table with limit '{request.limit_type}' already exists for this room"
         )
     
+    # Проверяем уникальность table_key (external_table_id) в рамках комнаты
+    table_key = request.table_key or request.external_table_id
+    if table_key:
+        existing_key = db.query(Table).filter(
+            Table.room_id == request.room_id,
+            Table.external_table_id == table_key
+        ).first()
+        if existing_key:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Table with table_key '{table_key}' already exists for this room"
+            )
+
     table = Table(
         room_id=request.room_id,
+        external_table_id=(request.table_key or request.external_table_id),
         limit_type=request.limit_type,
         max_players=request.max_players,
         meta=request.meta
@@ -136,10 +157,26 @@ async def update_table(
         )
     
     old_values = {
+        "table_key": table.external_table_id,
         "limit_type": table.limit_type,
         "max_players": table.max_players
     }
     
+    if request.table_key is not None or request.external_table_id is not None:
+        new_key = request.table_key or request.external_table_id
+        # Уникальность в рамках комнаты
+        if new_key:
+            existing_key = db.query(Table).filter(
+                Table.room_id == table.room_id,
+                Table.external_table_id == new_key,
+                Table.id != table_id
+            ).first()
+            if existing_key:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Table with table_key '{new_key}' already exists for this room"
+                )
+        table.external_table_id = new_key
     if request.limit_type is not None:
         # Проверяем уникальность
         existing = db.query(Table).filter(
@@ -163,6 +200,7 @@ async def update_table(
     db.refresh(table)
     
     new_values = {
+        "table_key": table.external_table_id,
         "limit_type": table.limit_type,
         "max_players": table.max_players
     }

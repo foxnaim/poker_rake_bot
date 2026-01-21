@@ -2,7 +2,6 @@
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import QueuePool
 import os
 from typing import Generator
 
@@ -10,21 +9,62 @@ from .models import Base
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://pokerbot:pokerbot_dev@postgres:5432/pokerbot_db"  # Исправлено: postgres вместо localhost для Docker
+    # По умолчанию в docker-compose передаётся DATABASE_URL на Postgres.
+    # Для локального запуска "без докера" безопаснее иметь sqlite fallback,
+    # чтобы импорт пакета не падал без psycopg2.
+    "sqlite:///./pokerbot_local.db",
 )
 
-# Оптимизированный engine с connection pooling
-engine = create_engine(
-    DATABASE_URL,
-    poolclass=QueuePool,
-    pool_size=20,  # Количество соединений в пуле
-    max_overflow=40,  # Максимальное количество дополнительных соединений
-    pool_pre_ping=True,  # Проверка соединений перед использованием
-    pool_recycle=3600,  # Переиспользование соединений каждый час
-    echo=False  # Установить True для отладки SQL запросов
-)
+def _make_engine(db_url: str):
+    """
+    Создаёт SQLAlchemy engine.
+    Если Postgres драйвер недоступен (часто на голой машине без deps),
+    автоматически падаем на sqlite, чтобы проект можно было хотя бы запустить/протестировать.
+    """
+    try:
+        # Для Postgres хотим пул соединений.
+        if db_url.startswith("postgresql://") or db_url.startswith("postgresql+psycopg2://"):
+            from sqlalchemy.pool import QueuePool
+            return create_engine(
+                db_url,
+                poolclass=QueuePool,
+                pool_size=20,
+                max_overflow=40,
+                pool_pre_ping=True,
+                pool_recycle=3600,
+                echo=False,
+            )
+
+        # Для sqlite — без агрессивного пула, с совместимостью потоков.
+        if db_url.startswith("sqlite://"):
+            return create_engine(
+                db_url,
+                connect_args={"check_same_thread": False},
+                echo=False,
+            )
+
+        # Любой другой URL — пробуем как есть.
+        return create_engine(db_url, echo=False)
+    except ModuleNotFoundError as e:
+        # Частый случай: postgresql://... без psycopg2 в окружении.
+        if "psycopg2" in str(e):
+            sqlite_url = "sqlite:///./pokerbot_local.db"
+            return create_engine(
+                sqlite_url,
+                connect_args={"check_same_thread": False},
+                echo=False,
+            )
+        raise
+
+
+engine = _make_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Для sqlite (локальный режим "без докера") создаём таблицы сразу,
+# чтобы простые unit-тесты могли работать без явного вызова init_db().
+if engine.dialect.name == "sqlite":
+    Base.metadata.create_all(bind=engine)
 
 
 def init_db():

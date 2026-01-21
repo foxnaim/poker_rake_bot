@@ -297,6 +297,13 @@ async def get_agent_status(
     
     # Вычисляем heartbeat lag (секунды с последнего heartbeat)
     heartbeat_lag = (datetime.now(timezone.utc) - agent.last_seen).total_seconds() if agent.last_seen else None
+
+    assigned_session_key = None
+    table_key = None
+    if agent.assigned_session is not None:
+        assigned_session_key = agent.assigned_session.session_id
+        if agent.assigned_session.table is not None:
+            table_key = agent.assigned_session.table.external_table_id
     
     return AgentStatusResponse(
         agent_id=agent.agent_id,
@@ -304,6 +311,8 @@ async def get_agent_status(
         last_seen=agent.last_seen,
         version=agent.version,
         assigned_session_id=agent.assigned_session_id,
+        assigned_session_key=assigned_session_key,
+        table_key=table_key,
         heartbeat_lag_seconds=heartbeat_lag,
         errors=agent.meta.get("last_errors", []) if agent.meta else []
     )
@@ -329,6 +338,8 @@ async def list_agents(
             last_seen=a.last_seen,
             version=a.version,
             assigned_session_id=a.assigned_session_id,
+            assigned_session_key=(a.assigned_session.session_id if a.assigned_session is not None else None),
+            table_key=(a.assigned_session.table.external_table_id if a.assigned_session is not None and a.assigned_session.table is not None else None),
             heartbeat_lag_seconds=(datetime.now(timezone.utc) - a.last_seen).total_seconds() if a.last_seen else None
         )
         for a in agents

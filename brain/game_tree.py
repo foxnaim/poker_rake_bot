@@ -2,9 +2,18 @@
 
 from typing import Dict, List, Optional, Tuple, Set
 from enum import IntEnum
-import numpy as np
+try:
+    import numpy as np  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
+    np = None
 from collections import defaultdict
-from numba import jit
+try:
+    from numba import jit  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
+    def jit(*_args, **_kwargs):  # type: ignore
+        def _decorator(fn):
+            return fn
+        return _decorator
 
 
 class NodeType(IntEnum):

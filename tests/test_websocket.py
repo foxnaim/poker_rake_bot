@@ -1,6 +1,7 @@
 """Тесты для WebSocket"""
 
 import pytest
+fastapi = pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 from fastapi.websockets import WebSocket
 

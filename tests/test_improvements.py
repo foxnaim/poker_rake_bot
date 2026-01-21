@@ -1,6 +1,7 @@
 """Тесты для всех улучшений и исправлений проекта"""
 
 import pytest
+pytest.importorskip("numpy")
 import sys
 from pathlib import Path
 

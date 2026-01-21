@@ -14,6 +14,26 @@ from data.database import get_db
 
 router = APIRouter(prefix="/api/v1", tags=["decisions"])
 
+def _resolve_table_key(db: Session, table_id_in: str | None) -> str | None:
+    """Пытается привести table_id к Table.external_table_id."""
+    if not table_id_in:
+        return None
+    try:
+        from data.models import Table
+        table_id_str = str(table_id_in)
+        table = None
+        try:
+            pk = int(table_id_str)
+        except (TypeError, ValueError):
+            pk = None
+        if pk is not None:
+            table = db.query(Table).filter(Table.id == pk).first()
+        if table is None:
+            table = db.query(Table).filter(Table.external_table_id == table_id_str).first()
+        return table.external_table_id if table and table.external_table_id else table_id_str
+    except Exception:
+        return str(table_id_in)
+
 
 @router.post("/decide", response_model=DecisionResponse)
 async def decide_endpoint(
@@ -62,6 +82,15 @@ async def decide_endpoint(
     start_time = time.time()
     
     try:
+        # Нормализуем table_id -> table_key ПОСЛЕ HMAC-проверки,
+        # чтобы подпись считалась по оригинальному body, но логирование/кэш были консистентны.
+        table_key = _resolve_table_key(db, getattr(request, "table_id", None))
+        if table_key:
+            try:
+                request.table_id = table_key
+            except Exception:
+                pass
+
         decision = make_decision(request)
         latency_ms = decision.get("latency_ms", 0)
         
@@ -84,6 +113,7 @@ async def decide_endpoint(
         # Отправляем через WebSocket
         await broadcast_decision({
             "hand_id": request.hand_id,
+            "table_key": table_key,
             "action": decision["action"],
             "amount": decision.get("amount"),
             "latency_ms": latency_ms,
@@ -94,6 +124,7 @@ async def decide_endpoint(
         return DecisionResponse(
             action=decision["action"],
             amount=decision.get("amount"),
+            table_key=table_key,
             reasoning=decision.get("reasoning", {}),
             latency_ms=latency_ms or 0
         )

@@ -1,5 +1,9 @@
 """Ручные тесты для Week 3 - для запуска вручную и проверки функциональности"""
 
+import pytest
+# Эти тесты используют async def и требуют pytest-asyncio/anyio плагины.
+pytest.importorskip("pytest_asyncio")
+
 import asyncio
 import aiohttp
 import json

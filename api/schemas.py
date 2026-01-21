@@ -32,6 +32,7 @@ class DecisionResponse(BaseModel):
     """Ответ с решением бота"""
     action: str = Field(description="Действие: fold, check, call, raise, all_in")
     amount: Optional[float] = Field(default=None, description="Размер ставки (для raise)")
+    table_key: Optional[str] = Field(default=None, description="Ключ стола (Table.external_table_id)")
     reasoning: Optional[Dict] = Field(default=None, description="Объяснение решения")
     latency_ms: int = Field(default=0, description="Время ответа в миллисекундах")
     cached: Optional[bool] = Field(default=False, description="Было ли решение из кэша")
@@ -41,6 +42,10 @@ class HandLogRequest(BaseModel):
     """Запрос для логирования раздачи"""
     hand_id: str
     table_id: str
+    table_key: Optional[str] = Field(
+        default=None,
+        description="Человеко/agent-friendly ключ стола (Table.external_table_id). Если задан, предпочтительнее table_id.",
+    )
     limit_type: str
     session_id: Optional[str] = Field(None, description="ID сессии бота (для привязки к session)")
     players_count: int
@@ -90,6 +95,11 @@ class StatsResponse(BaseModel):
     total_decisions: int = Field(description="Всего решений")
     total_sessions: int = Field(default=0, description="Всего сессий")
     active_sessions: int = Field(default=0, description="Активных сессий")
+    # Разделяем новый control-plane и legacy bot_stats (для диагностики/переезда)
+    total_control_sessions: int = Field(default=0, description="Всего control-plane сессий (bot_sessions)")
+    active_control_sessions: int = Field(default=0, description="Активных control-plane сессий (bot_sessions)")
+    total_legacy_sessions: int = Field(default=0, description="Всего legacy сессий (bot_stats)")
+    active_legacy_sessions: int = Field(default=0, description="Активных legacy сессий (bot_stats)")
     total_opponents: int = Field(description="Всего профилей оппонентов")
     active_checkpoints: int = Field(description="Активных чекпоинтов")
     total_profit: float = Field(default=0.0, description="Суммарный профит (в валюте логов)")
@@ -116,6 +126,7 @@ class HandHistoryResponse(BaseModel):
     id: int
     hand_id: str
     table_id: str
+    table_key: Optional[str] = Field(default=None, description="Человеко/agent-friendly ключ стола")
     limit_type: str
     result: Optional[float]
     pot_size: Optional[float]
@@ -129,6 +140,7 @@ class DecisionHistoryResponse(BaseModel):
     id: int
     hand_id: str
     table_id: Optional[str] = Field(default=None, description="ID стола (если доступно)")
+    table_key: Optional[str] = Field(default=None, description="Человеко/agent-friendly ключ стола")
     street: str
     action: str
     amount: Optional[float]
@@ -278,6 +290,7 @@ class HandLogResponse(BaseModel):
     """Ответ при логировании раздачи"""
     status: str
     hand_id: str
+    table_key: Optional[str] = Field(default=None, description="Ключ стола (Table.external_table_id)")
 
 
 # ============================================
@@ -321,6 +334,8 @@ class AgentStatusResponse(BaseModel):
     last_seen: Optional[datetime]
     version: Optional[str]
     assigned_session_id: Optional[int]
+    assigned_session_key: Optional[str] = Field(default=None, description="BotSession.session_id (строковый ключ)")
+    table_key: Optional[str] = Field(default=None, description="Table.external_table_id (строковый ключ стола)")
     heartbeat_lag_seconds: Optional[float] = Field(description="Секунд с последнего heartbeat")
     errors: List[str] = Field(default=[], description="Последние ошибки")
 
@@ -332,4 +347,6 @@ class AgentListResponse(BaseModel):
     last_seen: Optional[datetime]
     version: Optional[str]
     assigned_session_id: Optional[int]
+    assigned_session_key: Optional[str] = None
+    table_key: Optional[str] = None
     heartbeat_lag_seconds: Optional[float]

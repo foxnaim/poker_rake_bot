@@ -39,6 +39,7 @@ CREATE INDEX IF NOT EXISTS idx_rooms_type ON rooms(type);
 CREATE TABLE IF NOT EXISTS tables (
     id SERIAL PRIMARY KEY,
     room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    external_table_id VARCHAR(100),  -- внешний ID стола (agent/table_id)
     limit_type VARCHAR(20) NOT NULL,  -- NL10, NL50, etc.
     max_players INTEGER NOT NULL DEFAULT 6,
     meta JSONB,  -- дополнительные данные
@@ -47,7 +48,12 @@ CREATE TABLE IF NOT EXISTS tables (
     UNIQUE(room_id, limit_type)  -- один лимит на комнату
 );
 
+-- Если таблица уже существовала до добавления external_table_id
+ALTER TABLE tables
+    ADD COLUMN IF NOT EXISTS external_table_id VARCHAR(100);
+
 CREATE INDEX IF NOT EXISTS idx_tables_room_id ON tables(room_id);
+CREATE INDEX IF NOT EXISTS idx_tables_external_table_id ON tables(external_table_id);
 CREATE INDEX IF NOT EXISTS idx_tables_limit_type ON tables(limit_type);
 
 -- Таблица моделей рейка

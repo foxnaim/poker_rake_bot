@@ -30,6 +30,7 @@ class TableAgentRunner:
         api_url: str,
         bot_id: str,
         limit_type: str,
+        table_key: Optional[str] = None,
         api_key: Optional[str] = None,
         executor_type: str = "dummy",
         room: str = "pokerking",
@@ -43,7 +44,8 @@ class TableAgentRunner:
 
         self.agent_config = AgentConfig(
             bot_id=bot_id,
-            limit_type=limit_type
+            limit_type=limit_type,
+            table_key=table_key,
         )
 
         self.agent: Optional[TableAgent] = None
@@ -231,7 +233,7 @@ class TableAgentRunner:
 
         test_state = {
             "hand_id": f"test_{int(asyncio.get_event_loop().time())}",
-            "table_id": "table_1",
+            "table_id": (self.agent_config.table_key or "table_1"),
             "hero_cards": hero_cards,
             "board_cards": board,
             "hero_position": hero_pos,
@@ -258,6 +260,7 @@ def main():
     parser.add_argument("--api", default="http://localhost:8000", help="Backend API URL")
     parser.add_argument("--bot", default="bot_1", help="Bot ID")
     parser.add_argument("--limit", default="NL10", help="Limit type (NL10, NL50)")
+    parser.add_argument("--table-key", default=None, help="Table key (Table.external_table_id). Overrides table_id in API calls.")
     parser.add_argument("--key", help="API key")
     parser.add_argument("--interactive", "-i", action="store_true", help="Interactive mode")
     parser.add_argument("--executor", choices=["dummy", "pyautogui", "adb"], default="dummy",
@@ -272,6 +275,7 @@ def main():
         api_url=args.api,
         bot_id=args.bot,
         limit_type=args.limit,
+        table_key=args.table_key,
         api_key=args.key,
         executor_type=args.executor,
         room=args.room,

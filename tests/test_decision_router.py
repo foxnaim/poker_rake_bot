@@ -1,6 +1,7 @@
 """Тесты для Decision Router"""
 
 import pytest
+pytest.importorskip("numpy")
 from brain.decision_router import DecisionRouter
 from pathlib import Path
 

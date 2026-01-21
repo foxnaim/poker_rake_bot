@@ -1,6 +1,7 @@
 """Интеграционные тесты для Week 3 функциональности"""
 
 import pytest
+pytest.importorskip("fastapi")
 import asyncio
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session

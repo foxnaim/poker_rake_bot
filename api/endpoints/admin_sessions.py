@@ -18,7 +18,9 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin", "sessions"])
 class SessionStartRequest(BaseModel):
     """Запрос на старт сессии"""
     bot_id: int
-    table_id: int
+    # Можно указать либо table_id (PK), либо table_key (строковый ключ для агента)
+    table_id: Optional[int] = None
+    table_key: Optional[str] = None
     limit: str
     style: Optional[str] = None  # Если не указан, используется default_style бота
     bot_config_id: Optional[int] = None  # Если не указан, используется default config
@@ -29,6 +31,7 @@ class SessionStartResponse(BaseModel):
     session_id: str
     bot_id: int
     table_id: int
+    table_key: Optional[str] = None
     bot_config_id: Optional[int]
     status: str
     started_at: datetime
@@ -41,6 +44,7 @@ class SessionResponse(BaseModel):
     session_id: str
     bot_id: int
     table_id: int
+    table_key: Optional[str] = None
     bot_config_id: Optional[int]
     status: str
     started_at: datetime
@@ -78,8 +82,19 @@ async def start_session(
             detail="Bot is not active"
         )
     
-    # Проверяем стол
-    table = db.query(Table).filter(Table.id == request.table_id).first()
+    # Проверяем стол (по id или по table_key)
+    if request.table_id is None and not request.table_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide either table_id or table_key"
+        )
+
+    table = None
+    if request.table_id is not None:
+        table = db.query(Table).filter(Table.id == request.table_id).first()
+    if table is None and request.table_key:
+        table = db.query(Table).filter(Table.external_table_id == request.table_key).first()
+
     if not table:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -136,7 +151,7 @@ async def start_session(
     session = BotSession(
         session_id=session_id,
         bot_id=request.bot_id,
-        table_id=request.table_id,
+        table_id=table.id,
         bot_config_id=bot_config_id,
         status="starting",
         meta={"style": request.style or bot.default_style, "limit": request.limit}
@@ -145,13 +160,31 @@ async def start_session(
     db.add(session)
     db.commit()
     db.refresh(session)
+
+    # Совместимость со старым контуром статистики (bot_stats),
+    # чтобы /api/v1/stats и /api/v1/sessions/* работали согласованно.
+    from data.models import BotStats
+    existing_stats = db.query(BotStats).filter(
+        BotStats.session_id == session_id,
+        BotStats.period_end.is_(None),
+    ).first()
+    if not existing_stats:
+        stats_row = BotStats(
+            session_id=session_id,
+            limit_type=request.limit,
+            period_start=session.started_at,
+            period_end=None,
+        )
+        db.add(stats_row)
+        db.commit()
     
     audit_log_create(db, admin_key, "start_session", "bot_session", session.id, None, {"session_id": session_id})
     
     return SessionStartResponse(
         session_id=session_id,
         bot_id=request.bot_id,
-        table_id=request.table_id,
+        table_id=table.id,
+        table_key=table.external_table_id,
         bot_config_id=bot_config_id,
         status=session.status,
         started_at=session.started_at,
@@ -214,6 +247,16 @@ async def stop_session(
     session.ended_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(session)
+
+    # Закрываем соответствующую запись bot_stats (если есть)
+    from data.models import BotStats
+    stats_row = db.query(BotStats).filter(
+        BotStats.session_id == session_id,
+        BotStats.period_end.is_(None),
+    ).first()
+    if stats_row:
+        stats_row.period_end = session.ended_at
+        db.commit()
     
     audit_log_create(db, admin_key, "stop_session", "bot_session", session.id, {"status": old_status}, {"status": "stopped"})
     

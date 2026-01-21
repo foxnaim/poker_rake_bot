@@ -53,6 +53,26 @@ app.include_router(api_keys_router.router)
 app.include_router(stats_router.router)
 app.include_router(sessions_router.router)
 app.include_router(training_router.router)
+app.include_router(agents_router.router)
+
+# Admin/operator API (control-plane) — включается флагом окружения
+ENABLE_ADMIN_API = os.getenv("ENABLE_ADMIN_API", "0") == "1"
+if ENABLE_ADMIN_API:
+    from api.endpoints import (
+        admin_bots as admin_bots_router,
+        admin_rooms as admin_rooms_router,
+        admin_tables as admin_tables_router,
+        admin_rake_models as admin_rake_models_router,
+        admin_bot_configs as admin_bot_configs_router,
+        admin_sessions as admin_sessions_router,
+    )
+
+    app.include_router(admin_bots_router.router)
+    app.include_router(admin_rooms_router.router)
+    app.include_router(admin_tables_router.router)
+    app.include_router(admin_rake_models_router.router)
+    app.include_router(admin_bot_configs_router.router)
+    app.include_router(admin_sessions_router.router)
 
 # Middleware (порядок важен!)
 app.add_middleware(TimingMiddleware)
@@ -81,7 +101,7 @@ app.add_middleware(
 async def startup_event():
     """Инициализация при запуске"""
     init_db()
-    # Week2+ роутеры (operator control-plane) подключим после стабилизации
+    # NOTE: Роутеры уже зарегистрированы выше; тут только init_db()
 
 
 @app.get("/", response_class=HTMLResponse)

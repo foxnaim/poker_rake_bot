@@ -1,6 +1,7 @@
 """Тесты для MCCFR"""
 
 import pytest
+pytest.importorskip("numpy")
 from brain.game_tree import GameTree, GameNode, NodeType
 from brain.mccfr import MCCFR
 
