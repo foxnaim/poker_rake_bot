@@ -48,7 +48,8 @@ class PerformanceLog(Base):
     latency_ms = Column(Integer, nullable=False)
     status_code = Column(Integer)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
-    meta_data = Column(JSON)
+    # В SQL миграции колонка называется "metadata"
+    meta_data = Column("metadata", JSON)
 
 
 class Alert(Base):
@@ -59,7 +60,8 @@ class Alert(Base):
     alert_type = Column(String(50), nullable=False, index=True)
     severity = Column(String(20), nullable=False)  # info, warning, error, critical
     message = Column(Text, nullable=False)
-    meta_data = Column(JSON)
+    # В SQL миграции колонка называется "metadata"
+    meta_data = Column("metadata", JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
     resolved_at = Column(DateTime)
     is_resolved = Column(Boolean, default=False, index=True)
