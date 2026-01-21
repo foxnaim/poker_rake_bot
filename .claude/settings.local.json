@@ -12,7 +12,8 @@
       "Bash(docker-compose logs:*)",
       "Bash(docker-compose restart:*)",
       "Bash(docker-compose ps:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(docker compose:*)"
     ]
   }
 }
