@@ -254,8 +254,8 @@ class AutoTrainer:
             
             if not stats:
                 return {"valid": True, "reason": "no_data"}
-            
-            winrate = float(stats.winrate_bb_100)
+
+            winrate = float(stats.winrate_bb_100 or 0)
             
             # Загружаем целевые параметры
             styles = self.config.get("styles", {})

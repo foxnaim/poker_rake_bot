@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional
 import pickle
 
 from brain.mccfr import MCCFR

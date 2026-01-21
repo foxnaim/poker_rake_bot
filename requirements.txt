@@ -47,3 +47,7 @@ requests==2.31.0  # For integration tests
 
 # Scheduling
 schedule==1.2.0
+
+# Table Agent
+aiohttp==3.9.1
+pyautogui==0.9.54  # для Desktop клиентов (опционально)
