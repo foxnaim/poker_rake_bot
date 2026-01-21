@@ -16,7 +16,16 @@ from api.metrics import get_metrics, update_bot_stats_metrics, decision_latency_
 from api.auth import optional_api_key
 from api.auth_hmac import verify_hmac_signature
 from api.websocket import websocket_endpoint, manager
-from api.endpoints import decide as decide_router, log_hand as log_hand_router, profiles as profiles_router, api_keys as api_keys_router, stats as stats_router, sessions as sessions_router, training as training_router
+from api.endpoints import (
+    decide as decide_router,
+    log_hand as log_hand_router,
+    profiles as profiles_router,
+    api_keys as api_keys_router,
+    stats as stats_router,
+    sessions as sessions_router,
+    training as training_router,
+    agents as agents_router,
+)
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse
 from fastapi import WebSocket
@@ -63,6 +72,15 @@ async def startup_event():
     app.include_router(stats_router.router)
     app.include_router(sessions_router.router)
     app.include_router(training_router.router)
+    app.include_router(agents_router.router)  # Week 3: Agent protocol
+    
+    # Week 2: Admin роутеры
+    app.include_router(admin_bots_router.router)
+    app.include_router(admin_rooms_router.router)
+    app.include_router(admin_tables_router.router)
+    app.include_router(admin_rake_models_router.router)
+    app.include_router(admin_bot_configs_router.router)
+    app.include_router(admin_sessions_router.router)
 
 
 @app.get("/", response_class=HTMLResponse)

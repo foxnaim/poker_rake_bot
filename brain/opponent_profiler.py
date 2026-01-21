@@ -136,9 +136,10 @@ class OpponentProfiler:
         Returns:
             Тип игрока
         """
-        vpip = float(profile.vpip)
-        pfr = float(profile.pfr)
-        af = float(profile.aggression_factor)
+        # Numeric поля могут быть Decimal/float/None
+        vpip = float(profile.vpip or 0.0)
+        pfr = float(profile.pfr or 0.0)
+        af = float(profile.aggression_factor or 0.0)
         
         # Фиш (лузовый)
         if vpip >= 40:

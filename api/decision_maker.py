@@ -25,6 +25,8 @@ def make_decision(request: GameStateRequest) -> Dict:
     
     # Преобразуем запрос в формат для Decision Router
     game_state = {
+        "hand_id": request.hand_id,
+        "table_id": request.table_id,
         "street": request.street,
         "hero_position": request.hero_position,
         "dealer": request.dealer,
@@ -113,6 +115,7 @@ def make_decision(request: GameStateRequest) -> Dict:
             action_amount=amount,
             reasoning=reasoning,
             latency_ms=latency_ms,
+            session_id=getattr(request, 'session_id', None),
             db_session=db
         )
         

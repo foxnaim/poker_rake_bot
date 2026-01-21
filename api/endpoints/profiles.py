@@ -10,6 +10,17 @@ from data.database import get_db
 
 router = APIRouter(prefix="/api/v1", tags=["profiles"])
 
+def _normalize_classification_for_api(classification: Optional[str]) -> str:
+    """
+    Нормализует классификацию под текущий UI/фильтры.
+    В БД может храниться fish_loose, а UI ожидает fish.
+    """
+    if not classification:
+        return "unknown"
+    if classification == "fish_loose":
+        return "fish"
+    return classification
+
 
 @router.get("/opponent/{opponent_id}", response_model=OpponentProfileResponse)
 async def get_opponent_profile(
@@ -55,7 +66,7 @@ async def get_opponent_profile(
         three_bet_pct=float(profile.three_bet_pct),
         aggression_factor=float(profile.aggression_factor),
         hands_played=profile.hands_played,
-        classification=profile.classification or "unknown"
+        classification=_normalize_classification_for_api(profile.classification)
     )
 
 
@@ -82,7 +93,9 @@ async def get_all_opponents(
 
     # Фильтры
     if classification:
-        query = query.filter(OpponentProfile.classification == classification)
+        # Совместимость с UI: fish -> fish_loose
+        classification_db = "fish_loose" if classification == "fish" else classification
+        query = query.filter(OpponentProfile.classification == classification_db)
 
     if min_hands > 0:
         query = query.filter(OpponentProfile.hands_played >= min_hands)
@@ -101,7 +114,7 @@ async def get_all_opponents(
             three_bet_pct=float(p.three_bet_pct),
             aggression_factor=float(p.aggression_factor),
             hands_played=p.hands_played,
-            classification=p.classification or "unknown"
+            classification=_normalize_classification_for_api(p.classification)
         )
         for p in profiles
     ]
@@ -130,14 +143,6 @@ async def create_opponent_profile(
             detail=f"Профиль для оппонента {profile.opponent_id} уже существует"
         )
 
-    # Классифицируем на основе stats
-    classification = opponent_profiler._classify_player(
-        vpip=profile.vpip,
-        pfr=profile.pfr,
-        three_bet_pct=profile.three_bet_pct,
-        aggression_factor=profile.aggression_factor
-    )
-
     new_profile = OpponentProfile(
         opponent_id=profile.opponent_id,
         vpip=profile.vpip,
@@ -145,8 +150,10 @@ async def create_opponent_profile(
         three_bet_pct=profile.three_bet_pct,
         aggression_factor=profile.aggression_factor,
         hands_played=profile.hands_played or 0,
-        classification=classification
+        classification=None
     )
+    # Классифицируем на основе заполненных полей модели
+    new_profile.classification = opponent_profiler._classify_player(new_profile)
 
     db.add(new_profile)
     db.commit()
@@ -159,7 +166,7 @@ async def create_opponent_profile(
         three_bet_pct=float(new_profile.three_bet_pct),
         aggression_factor=float(new_profile.aggression_factor),
         hands_played=new_profile.hands_played,
-        classification=new_profile.classification
+        classification=_normalize_classification_for_api(new_profile.classification)
     )
 
 
@@ -194,12 +201,7 @@ async def update_opponent_profile(
 
     # Пересчитываем классификацию если изменились stats
     if any(k in update_data for k in ['vpip', 'pfr', 'three_bet_pct', 'aggression_factor']):
-        profile.classification = opponent_profiler._classify_player(
-            vpip=profile.vpip,
-            pfr=profile.pfr,
-            three_bet_pct=profile.three_bet_pct,
-            aggression_factor=profile.aggression_factor
-        )
+        profile.classification = opponent_profiler._classify_player(profile)
 
     db.commit()
     db.refresh(profile)
@@ -211,7 +213,7 @@ async def update_opponent_profile(
         three_bet_pct=float(profile.three_bet_pct),
         aggression_factor=float(profile.aggression_factor),
         hands_played=profile.hands_played,
-        classification=profile.classification
+        classification=_normalize_classification_for_api(profile.classification)
     )
 
 
@@ -283,12 +285,7 @@ async def create_opponents_bulk(
                     existing.hands_played = profile_data.hands_played or 0
 
                     # Пересчитываем классификацию
-                    existing.classification = opponent_profiler._classify_player(
-                        vpip=existing.vpip,
-                        pfr=existing.pfr,
-                        three_bet_pct=existing.three_bet_pct,
-                        aggression_factor=existing.aggression_factor
-                    )
+                    existing.classification = opponent_profiler._classify_player(existing)
 
                     updated_count += 1
                 elif not request.skip_existing:
@@ -299,14 +296,6 @@ async def create_opponents_bulk(
                     })
                 continue
 
-            # Создаем новый профиль
-            classification = opponent_profiler._classify_player(
-                vpip=profile_data.vpip,
-                pfr=profile_data.pfr,
-                three_bet_pct=profile_data.three_bet_pct,
-                aggression_factor=profile_data.aggression_factor
-            )
-
             new_profile = OpponentProfile(
                 opponent_id=profile_data.opponent_id,
                 vpip=profile_data.vpip,
@@ -314,8 +303,9 @@ async def create_opponents_bulk(
                 three_bet_pct=profile_data.three_bet_pct,
                 aggression_factor=profile_data.aggression_factor,
                 hands_played=profile_data.hands_played or 0,
-                classification=classification
+                classification=None
             )
+            new_profile.classification = opponent_profiler._classify_player(new_profile)
 
             db.add(new_profile)
             success_count += 1

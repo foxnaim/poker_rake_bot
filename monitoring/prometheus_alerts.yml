@@ -1,0 +1,75 @@
+# Prometheus Alerting Rules для Week 3
+
+groups:
+  - name: poker_bot_alerts
+    interval: 30s
+    rules:
+      # Агент офлайн
+      - alert: AgentOffline
+        expr: agent_heartbeat_lag_seconds > 300  # 5 минут
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Agent {{ $labels.agent_id }} is offline"
+          description: "Agent {{ $labels.agent_id }} has not sent heartbeat for {{ $value }} seconds"
+
+      # Высокая задержка p99
+      - alert: HighDecisionLatencyP99
+        expr: histogram_quantile(0.99, decision_latency_seconds_bucket) > 1.0  # 1 секунда
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High decision latency (p99)"
+          description: "Decision latency p99 is {{ $value }}s (threshold: 1.0s)"
+
+      # Частые ошибки /decide
+      - alert: FrequentDecisionErrors
+        expr: rate(decision_errors_total[5m]) > 0.1  # > 0.1 errors/sec
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Frequent decision errors"
+          description: "Decision error rate is {{ $value }} errors/sec"
+
+      # Агент офлайн критично
+      - alert: AgentOfflineCritical
+        expr: agent_heartbeat_lag_seconds > 600  # 10 минут
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Agent {{ $labels.agent_id }} is offline (critical)"
+          description: "Agent {{ $labels.agent_id }} has not sent heartbeat for {{ $value }} seconds"
+
+      # Высокая задержка p95
+      - alert: HighDecisionLatencyP95
+        expr: histogram_quantile(0.95, decision_latency_seconds_bucket) > 0.5  # 0.5 секунды
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High decision latency (p95)"
+          description: "Decision latency p95 is {{ $value }}s (threshold: 0.5s)"
+
+      # Низкая производительность (hands/hour)
+      - alert: LowHandsPerHour
+        expr: bot_hands_per_hour < 10  # меньше 10 рук/час
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low hands per hour"
+          description: "Hands per hour is {{ $value }} (threshold: 10)"
+
+      # Отрицательный профит
+      - alert: NegativeProfit
+        expr: bot_profit_bb_100 < -10  # меньше -10 bb/100
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Negative profit"
+          description: "Profit is {{ $value }} bb/100 for {{ $labels.limit_type }}"

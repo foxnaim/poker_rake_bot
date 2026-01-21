@@ -86,6 +86,157 @@ export class APIClient {
   async getHealth(): Promise<any> {
     return this.request('/api/v1/health');
   }
+
+  // Week 2: Admin API methods
+  async getBots(): Promise<any[]> {
+    return this.request('/api/v1/admin/bots');
+  }
+
+  async createBot(bot: any): Promise<any> {
+    return this.request('/api/v1/admin/bots', {
+      method: 'POST',
+      body: JSON.stringify(bot),
+    });
+  }
+
+  async updateBot(botId: number, bot: any): Promise<any> {
+    return this.request(`/api/v1/admin/bots/${botId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(bot),
+    });
+  }
+
+  async deleteBot(botId: number): Promise<void> {
+    return this.request(`/api/v1/admin/bots/${botId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getRooms(): Promise<any[]> {
+    return this.request('/api/v1/admin/rooms');
+  }
+
+  async createRoom(room: any): Promise<any> {
+    return this.request('/api/v1/admin/rooms', {
+      method: 'POST',
+      body: JSON.stringify(room),
+    });
+  }
+
+  async onboardRoom(room: any): Promise<any> {
+    return this.request('/api/v1/admin/rooms/onboard', {
+      method: 'POST',
+      body: JSON.stringify(room),
+    });
+  }
+
+  async getTables(roomId?: number): Promise<any[]> {
+    const url = roomId 
+      ? `/api/v1/admin/tables?room_id=${roomId}`
+      : '/api/v1/admin/tables';
+    return this.request(url);
+  }
+
+  async createTable(table: any): Promise<any> {
+    return this.request('/api/v1/admin/tables', {
+      method: 'POST',
+      body: JSON.stringify(table),
+    });
+  }
+
+  async updateTable(tableId: number, table: any): Promise<any> {
+    return this.request(`/api/v1/admin/tables/${tableId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(table),
+    });
+  }
+
+  async deleteTable(tableId: number): Promise<void> {
+    return this.request(`/api/v1/admin/tables/${tableId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getRakeModels(roomId?: number): Promise<any[]> {
+    const url = roomId 
+      ? `/api/v1/admin/rake-models?room_id=${roomId}`
+      : '/api/v1/admin/rake-models';
+    return this.request(url);
+  }
+
+  async createRakeModel(model: any): Promise<any> {
+    return this.request('/api/v1/admin/rake-models', {
+      method: 'POST',
+      body: JSON.stringify(model),
+    });
+  }
+
+  async updateRakeModel(modelId: number, model: any): Promise<any> {
+    return this.request(`/api/v1/admin/rake-models/${modelId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(model),
+    });
+  }
+
+  async deleteRakeModel(modelId: number): Promise<void> {
+    return this.request(`/api/v1/admin/rake-models/${modelId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getBotConfigs(botId?: number): Promise<any[]> {
+    const url = botId 
+      ? `/api/v1/admin/bot-configs?bot_id=${botId}`
+      : '/api/v1/admin/bot-configs';
+    return this.request(url);
+  }
+
+  async createBotConfig(config: any): Promise<any> {
+    return this.request('/api/v1/admin/bot-configs', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async updateBotConfig(configId: number, config: any): Promise<any> {
+    return this.request(`/api/v1/admin/bot-configs/${configId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async deleteBotConfig(configId: number): Promise<void> {
+    return this.request(`/api/v1/admin/bot-configs/${configId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async startSession(session: any): Promise<any> {
+    return this.request('/api/v1/admin/session/start', {
+      method: 'POST',
+      body: JSON.stringify(session),
+    });
+  }
+
+  async pauseSession(sessionId: string): Promise<any> {
+    return this.request(`/api/v1/admin/session/${sessionId}/pause`, {
+      method: 'POST',
+    });
+  }
+
+  async stopSession(sessionId: string): Promise<any> {
+    return this.request(`/api/v1/admin/session/${sessionId}/stop`, {
+      method: 'POST',
+    });
+  }
+
+  async getRecentSessions(limit: number = 50): Promise<any[]> {
+    return this.request(`/api/v1/admin/sessions/recent?limit=${limit}`);
+  }
+
+  async getSession(sessionId: string): Promise<any> {
+    return this.request(`/api/v1/admin/session/${sessionId}`);
+  }
 }
 
 export const apiClient = new APIClient();

@@ -25,4 +25,5 @@ docker-down:
 	docker-compose down
 
 migrate:
-	alembic upgrade head
+	@echo "Applying SQL migrations to postgres (docker-compose)..."
+	@docker-compose exec -T postgres psql -U pokerbot -d pokerbot_db < data/migrations_v1_2.sql

@@ -33,11 +33,27 @@ async def get_stats(
     - Количество активных чекпоинтов
     - Uptime
     """
-    from data.models import Hand, DecisionLog, OpponentProfile
+    from data.models import Hand, DecisionLog, OpponentProfile, BotStats
 
     total_hands = db.query(func.count(Hand.id)).scalar() or 0
     total_decisions = db.query(func.count(DecisionLog.id)).scalar() or 0
     total_opponents = db.query(func.count(OpponentProfile.id)).scalar() or 0
+
+    # Сессии (bot_stats)
+    total_sessions = db.query(func.count(BotStats.id)).scalar() or 0
+    active_sessions = db.query(func.count(BotStats.id)).filter(BotStats.period_end.is_(None)).scalar() or 0
+
+    # Финансовые агрегаты (из hands)
+    total_profit = db.query(func.sum(Hand.hero_result)).scalar()
+    total_profit = float(total_profit) if total_profit is not None else 0.0
+
+    total_rake = db.query(func.sum(Hand.rake_amount)).scalar()
+    total_rake = float(total_rake) if total_rake is not None else 0.0
+
+    # Упрощенный winrate (bb/100), считаем BB=1.0 как в текущем коде сессий
+    winrate_bb_100 = 0.0
+    if total_hands > 0:
+        winrate_bb_100 = (total_profit / total_hands) * 100.0
 
     # Активные чекпоинты
     from data.models import TrainingCheckpoint
@@ -56,8 +72,13 @@ async def get_stats(
     return StatsResponse(
         total_hands=total_hands,
         total_decisions=total_decisions,
+        total_sessions=total_sessions,
+        active_sessions=active_sessions,
         total_opponents=total_opponents,
         active_checkpoints=active_checkpoints,
+        total_profit=total_profit,
+        total_rake=total_rake,
+        winrate_bb_100=winrate_bb_100,
         last_hand_time=last_hand_time,
         last_decision_time=last_decision_time
     )
@@ -154,6 +175,7 @@ async def activate_checkpoint(
 @router.get("/hands/recent", response_model=List[HandHistoryResponse])
 async def get_recent_hands(
     limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0, description="Смещение (пагинация)"),
     table_id: Optional[str] = Query(None, description="Фильтр по столу"),
     db: Session = Depends(get_db)
 ):
@@ -173,7 +195,7 @@ async def get_recent_hands(
 
     query = query.order_by(desc(Hand.created_at))
 
-    hands = query.limit(limit).all()
+    hands = query.offset(offset).limit(limit).all()
 
     return [
         HandHistoryResponse(
@@ -211,7 +233,7 @@ async def get_decision_history(
     query = db.query(DecisionLog)
 
     if action:
-        query = query.filter(DecisionLog.action == action)
+        query = query.filter(DecisionLog.final_action == action)
 
     if street:
         query = query.filter(DecisionLog.street == street)
@@ -224,11 +246,11 @@ async def get_decision_history(
         DecisionHistoryResponse(
             id=d.id,
             hand_id=d.hand_id,
-            table_id=d.hand_id,  # table_id нет в DecisionLog
+            table_id=d.game_state.get("table_id") if isinstance(d.game_state, dict) else None,
             street=d.street,
             action=d.final_action,
             amount=float(d.action_amount) if d.action_amount else None,
-            pot_size=None,  # pot_size нет в DecisionLog
+            pot_size=float(d.game_state.get("pot")) if isinstance(d.game_state, dict) and d.game_state.get("pot") is not None else None,
             latency_ms=d.latency_ms,
             created_at=d.timestamp
         )

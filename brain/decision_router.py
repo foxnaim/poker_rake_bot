@@ -108,8 +108,8 @@ class DecisionRouter:
                 "reasoning": {
                     "type": "gto_exploit_mix",
                     "street": street,
-                    "gto_weight": self.decision_weights.get(street, {}).get("gto_weight", 0.5),
-                    "exploit_weight": self.decision_weights.get(street, {}).get("exploit_weight", 0.5),
+                    "gto_weight": self._get_weights_for_street(street).get("gto_weight", 0.5),
+                    "exploit_weight": self._get_weights_for_street(street).get("exploit_weight", 0.5),
                     "anti_pattern_applied": True
                 }
             }
@@ -187,7 +187,7 @@ class DecisionRouter:
         Returns:
             Смешанная стратегия
         """
-        weights = self.decision_weights.get(street, {})
+        weights = self._get_weights_for_street(street)
         gto_weight = weights.get("gto_weight", 0.5)
         exploit_weight = weights.get("exploit_weight", 0.5)
         
@@ -221,6 +221,21 @@ class DecisionRouter:
             mixed_strategy = {k: v / total for k, v in mixed_strategy.items()}
         
         return mixed_strategy
+
+    def _get_weights_for_street(self, street: str) -> Dict[str, float]:
+        """
+        Возвращает веса смешивания (GTO/Exploit) для улицы.
+
+        В конфиге веса заданы как:
+        - preflop
+        - postflop
+        А в runtime street приходит как: preflop/flop/turn/river
+        """
+        if street == "preflop":
+            return self.decision_weights.get("preflop", {})
+        if street in ("flop", "turn", "river"):
+            return self.decision_weights.get("postflop", {})
+        return self.decision_weights.get(street, {})
     
     def _adjust_to_style_targets(self, strategy: Dict[str, float], street: str,
                                 limit_type: str, style: str) -> Dict[str, float]:

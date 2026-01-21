@@ -1,0 +1,174 @@
+{
+  "dashboard": {
+    "title": "Poker Rake Bot - Week 3 Dashboard",
+    "theme": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Runtime: Latency (p95/p99)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, decision_latency_seconds_bucket{job=\"poker_bot_api\"})",
+            "legendFormat": "Decision P95",
+            "color": "#66FCF1"
+          },
+          {
+            "expr": "histogram_quantile(0.99, decision_latency_seconds_bucket{job=\"poker_bot_api\"})",
+            "legendFormat": "Decision P99",
+            "color": "#C5C6C7"
+          },
+          {
+            "expr": "histogram_quantile(0.95, http_request_duration_seconds_bucket{job=\"poker_bot_api\"})",
+            "legendFormat": "HTTP P95",
+            "color": "#45A29E"
+          }
+        ],
+        "yaxes": [{"format": "s", "label": "Latency"}]
+      },
+      {
+        "id": 2,
+        "title": "Runtime: Errors/sec",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(decision_errors_total{job=\"poker_bot_api\"}[1m])",
+            "legendFormat": "Decision Errors",
+            "color": "#FF6B6B"
+          },
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[1m])",
+            "legendFormat": "HTTP 5xx",
+            "color": "#FF8E53"
+          }
+        ],
+        "yaxes": [{"format": "ops", "label": "Errors/sec"}]
+      },
+      {
+        "id": 3,
+        "title": "Runtime: Decisions/sec",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(decisions_total{job=\"poker_bot_api\"}[1m])",
+            "legendFormat": "Decisions/sec",
+            "color": "#4ECDC4"
+          }
+        ],
+        "yaxes": [{"format": "ops", "label": "RPS"}]
+      },
+      {
+        "id": 4,
+        "title": "Gameplay: Hands/Hour",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "bot_hands_per_hour{job=\"poker_bot_api\"}",
+            "legendFormat": "{{limit_type}} - {{session_id}}",
+            "color": "#95E1D3"
+          }
+        ],
+        "yaxes": [{"format": "short", "label": "Hands/Hour"}]
+      },
+      {
+        "id": 5,
+        "title": "Gameplay: Profit/Rake Trends",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "bot_profit_bb_100{job=\"poker_bot_api\"}",
+            "legendFormat": "Profit bb/100 - {{limit_type}}",
+            "color": "#4ECDC4"
+          },
+          {
+            "expr": "bot_rake_100{job=\"poker_bot_api\"}",
+            "legendFormat": "Rake/100 - {{limit_type}}",
+            "color": "#FF6B6B"
+          }
+        ],
+        "yaxes": [{"format": "short", "label": "bb/100"}]
+      },
+      {
+        "id": 6,
+        "title": "Gameplay: Winrate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "bot_winrate_bb_100{job=\"poker_bot_api\"}",
+            "legendFormat": "Winrate - {{limit_type}}",
+            "color": "#95E1D3"
+          }
+        ],
+        "yaxes": [{"format": "short", "label": "bb/100"}]
+      },
+      {
+        "id": 7,
+        "title": "Agents: Online Status",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "agent_online{job=\"poker_bot_api\"}",
+            "legendFormat": "{{agent_id}}",
+            "color": "#4ECDC4"
+          }
+        ],
+        "yaxes": [{"format": "short", "label": "Status (1=online)"}]
+      },
+      {
+        "id": 8,
+        "title": "Agents: Heartbeat Lag",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "agent_heartbeat_lag_seconds{job=\"poker_bot_api\"}",
+            "legendFormat": "{{agent_id}}",
+            "color": "#FF6B6B"
+          }
+        ],
+        "yaxes": [{"format": "s", "label": "Lag (seconds)"}]
+      },
+      {
+        "id": 9,
+        "title": "Agents: Errors",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+        "targets": [
+          {
+            "expr": "rate(agent_errors_total{job=\"poker_bot_api\"}[1m])",
+            "legendFormat": "{{agent_id}} - {{error_type}}",
+            "color": "#FF8E53"
+          }
+        ],
+        "yaxes": [{"format": "ops", "label": "Errors/sec"}]
+      },
+      {
+        "id": 10,
+        "title": "Sessions: Active Count",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "targets": [
+          {
+            "expr": "session_active{job=\"poker_bot_api\"}",
+            "legendFormat": "{{limit_type}}",
+            "color": "#95E1D3"
+          }
+        ],
+        "yaxes": [{"format": "short", "label": "Active Sessions"}]
+      }
+    ],
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  }
+}

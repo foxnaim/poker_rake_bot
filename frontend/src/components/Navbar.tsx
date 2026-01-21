@@ -48,6 +48,49 @@ const Navbar: React.FC = () => {
         >
           🃏 Hands
         </Link>
+        <div style={{ borderLeft: '1px solid #C5C6C7', margin: '0 10px', height: '30px' }} />
+        <Link 
+          to="/admin/rooms" 
+          style={{...linkStyle, ...(isActive('/admin/rooms') ? activeLinkStyle : {})}}
+        >
+          🏠 Rooms
+        </Link>
+        <Link 
+          to="/admin/bots" 
+          style={{...linkStyle, ...(isActive('/admin/bots') ? activeLinkStyle : {})}}
+        >
+          🤖 Bots
+        </Link>
+        <Link 
+          to="/admin/tables" 
+          style={{...linkStyle, ...(isActive('/admin/tables') ? activeLinkStyle : {})}}
+        >
+          🎯 Tables
+        </Link>
+        <Link 
+          to="/admin/bot-configs" 
+          style={{...linkStyle, ...(isActive('/admin/bot-configs') ? activeLinkStyle : {})}}
+        >
+          ⚙️ Configs
+        </Link>
+        <Link 
+          to="/admin/rake-models" 
+          style={{...linkStyle, ...(isActive('/admin/rake-models') ? activeLinkStyle : {})}}
+        >
+          💰 Rake
+        </Link>
+        <Link 
+          to="/admin/sessions" 
+          style={{...linkStyle, ...(isActive('/admin/sessions') ? activeLinkStyle : {})}}
+        >
+          ⚡ Sessions
+        </Link>
+        <Link 
+          to="/admin/api-keys" 
+          style={{...linkStyle, ...(isActive('/admin/api-keys') ? activeLinkStyle : {})}}
+        >
+          🔑 API Keys
+        </Link>
       </div>
     </nav>
   );

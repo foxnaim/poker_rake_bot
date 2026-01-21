@@ -10,6 +10,13 @@ import OpponentsPage from './pages/OpponentsPage';
 import SessionsPage from './pages/SessionsPage';
 import TrainingPage from './pages/TrainingPage';
 import HandsPage from './pages/HandsPage';
+import AdminRoomsPage from './pages/AdminRoomsPage';
+import AdminBotsPage from './pages/AdminBotsPage';
+import AdminSessionsPage from './pages/AdminSessionsPage';
+import AdminTablesPage from './pages/AdminTablesPage';
+import AdminBotConfigsPage from './pages/AdminBotConfigsPage';
+import AdminRakeModelsPage from './pages/AdminRakeModelsPage';
+import AdminAPIKeysPage from './pages/AdminAPIKeysPage';
 import './App.css';
 
 const App: React.FC = () => {
@@ -24,6 +31,13 @@ const App: React.FC = () => {
             <Route path="/sessions" element={<SessionsPage />} />
             <Route path="/training" element={<TrainingPage />} />
             <Route path="/hands" element={<HandsPage />} />
+            <Route path="/admin/rooms" element={<AdminRoomsPage />} />
+            <Route path="/admin/bots" element={<AdminBotsPage />} />
+            <Route path="/admin/tables" element={<AdminTablesPage />} />
+            <Route path="/admin/bot-configs" element={<AdminBotConfigsPage />} />
+            <Route path="/admin/rake-models" element={<AdminRakeModelsPage />} />
+            <Route path="/admin/api-keys" element={<AdminAPIKeysPage />} />
+            <Route path="/admin/sessions" element={<AdminSessionsPage />} />
           </Routes>
         </main>
       </div>

@@ -3,6 +3,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
 from datetime import datetime
+from sqlalchemy.orm import Session
 
 
 class GameStateRequest(BaseModel):
@@ -10,6 +11,7 @@ class GameStateRequest(BaseModel):
     hand_id: str
     table_id: str
     limit_type: str = Field(default="NL10", description="Лимит игры (NL10, NL50)")
+    session_id: Optional[str] = Field(None, description="ID сессии бота (для привязки к session)")
     street: str = Field(description="Улица: preflop, flop, turn, river")
     hero_position: int = Field(description="Позиция героя (0-5)")
     dealer: int = Field(description="Позиция дилера (0-5)")
@@ -41,6 +43,7 @@ class HandLogRequest(BaseModel):
     hand_id: str
     table_id: str
     limit_type: str
+    session_id: Optional[str] = Field(None, description="ID сессии бота (для привязки к session)")
     players_count: int
     hero_position: int
     hero_cards: str
@@ -86,8 +89,13 @@ class StatsResponse(BaseModel):
     """Общая статистика бота"""
     total_hands: int = Field(description="Всего раздач")
     total_decisions: int = Field(description="Всего решений")
+    total_sessions: int = Field(default=0, description="Всего сессий")
+    active_sessions: int = Field(default=0, description="Активных сессий")
     total_opponents: int = Field(description="Всего профилей оппонентов")
     active_checkpoints: int = Field(description="Активных чекпоинтов")
+    total_profit: float = Field(default=0.0, description="Суммарный профит (в валюте логов)")
+    total_rake: float = Field(default=0.0, description="Суммарный рейк (в валюте логов)")
+    winrate_bb_100: float = Field(default=0.0, description="Оценка winrate bb/100 (упрощенно)")
     last_hand_time: Optional[datetime] = Field(None, description="Время последней раздачи")
     last_decision_time: Optional[datetime] = Field(None, description="Время последнего решения")
 
@@ -121,7 +129,7 @@ class DecisionHistoryResponse(BaseModel):
     """История решения"""
     id: int
     hand_id: str
-    table_id: str
+    table_id: Optional[str] = Field(default=None, description="ID стола (если доступно)")
     street: str
     action: str
     amount: Optional[float]
@@ -169,8 +177,11 @@ class SessionResponse(BaseModel):
     three_bet_pct: float
     aggression_factor: float
     winrate_bb_100: float
+    profit_bb_100: float  # Profit in bb/100
     total_rake: float
     rake_per_hour: float
+    rake_100: float  # Rake per 100 hands
+    hands_per_hour: float  # Hands per hour
     avg_pot_size: float
 
 
@@ -268,3 +279,88 @@ class HandLogResponse(BaseModel):
     """Ответ при логировании раздачи"""
     status: str
     hand_id: str
+
+
+# ============================================
+# Week 3: Agent Protocol Schemas
+# ============================================
+
+class AgentHeartbeatRequest(BaseModel):
+    """Запрос heartbeat от агента"""
+    agent_id: str
+    session_id: Optional[str] = None
+    status: Optional[str] = Field(default="online", description="Статус агента")
+    version: Optional[str] = None
+    errors: Optional[List[str]] = Field(default=None, description="Список последних ошибок")
+
+
+class AgentHeartbeatResponse(BaseModel):
+    """Ответ на heartbeat"""
+    status: str
+    agent_id: str
+    commands: List[Dict] = Field(default=[], description="Команды для агента")
+
+
+class AgentCommandRequest(BaseModel):
+    """Запрос на отправку команды агенту"""
+    command: str = Field(description="Команда: pause, resume, stop, sit_out")
+    reason: Optional[str] = Field(default=None, description="Причина команды")
+
+
+class AgentCommandResponse(BaseModel):
+    """Ответ на отправку команды"""
+    status: str
+    agent_id: str
+    command: str
+    message: str
+
+
+class AgentStatusResponse(BaseModel):
+    """Статус агента"""
+    agent_id: str
+    status: str
+    last_seen: Optional[datetime]
+    version: Optional[str]
+    assigned_session_id: Optional[int]
+    heartbeat_lag_seconds: Optional[float] = Field(description="Секунд с последнего heartbeat")
+    errors: List[str] = Field(default=[], description="Последние ошибки")
+
+
+class AgentListResponse(BaseModel):
+    """Информация об агенте в списке"""
+    agent_id: str
+    status: str
+    last_seen: Optional[datetime]
+    version: Optional[str]
+    assigned_session_id: Optional[int]
+    heartbeat_lag_seconds: Optional[float]
+
+
+# ============================================
+# Week 2: Admin schemas
+# ============================================
+
+def audit_log_create(
+    db: Session,
+    user_id: str,
+    action: str,
+    entity_type: str,
+    entity_id: Optional[int],
+    old_values: Optional[Dict] = None,
+    new_values: Optional[Dict] = None,
+    metadata: Optional[Dict] = None
+):
+    """Создает запись в audit log"""
+    from data.models import AuditLog
+    
+    audit = AuditLog(
+        user_id=user_id,
+        action=action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        old_values=old_values,
+        new_values=new_values,
+        metadata=metadata
+    )
+    db.add(audit)
+    db.commit()

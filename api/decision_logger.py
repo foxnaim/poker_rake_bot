@@ -22,6 +22,7 @@ class DecisionLogger:
                     action_amount: Optional[float] = None,
                     reasoning: Optional[Dict] = None,
                     latency_ms: Optional[int] = None,
+                    session_id: Optional[str] = None,
                     db_session: Optional[Session] = None) -> str:
         """
         Логирует решение в БД
@@ -54,9 +55,20 @@ class DecisionLogger:
             db = db_session
         
         try:
+            # Получаем session_id из строки (если передан)
+            session_id_int = None
+            if session_id:
+                from data.models import BotSession
+                # Используем правильную сессию БД
+                session_query_db = db if db_session is None else db_session
+                session = session_query_db.query(BotSession).filter(BotSession.session_id == session_id).first()
+                if session:
+                    session_id_int = session.id
+            
             decision_log = DecisionLog(
                 hand_id=hand_id,
                 decision_id=decision_id,
+                session_id=session_id_int,
                 street=street,
                 game_state=game_state,
                 gto_action=gto_strategy,

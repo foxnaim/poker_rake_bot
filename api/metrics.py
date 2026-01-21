@@ -69,6 +69,89 @@ bot_rake_per_hour = Gauge(
     ['limit_type', 'session_id']
 )
 
+bot_rake_100 = Gauge(
+    'bot_rake_100',
+    'Rake per 100 hands',
+    ['limit_type', 'session_id']
+)
+
+bot_profit_bb_100 = Gauge(
+    'bot_profit_bb_100',
+    'Profit in bb/100',
+    ['limit_type', 'session_id']
+)
+
+bot_hands_per_hour = Gauge(
+    'bot_hands_per_hour',
+    'Hands per hour',
+    ['limit_type', 'session_id']
+)
+
+# Week 3: Agent метрики
+agent_online = Gauge(
+    'agent_online',
+    'Agent online status (1=online, 0=offline)',
+    ['agent_id']
+)
+
+agent_heartbeat_lag_seconds = Gauge(
+    'agent_heartbeat_lag_seconds',
+    'Seconds since last heartbeat',
+    ['agent_id']
+)
+
+agent_errors_total = Counter(
+    'agent_errors_total',
+    'Total agent errors',
+    ['agent_id', 'error_type']
+)
+
+# Week 3: Session метрики
+session_active = Gauge(
+    'session_active',
+    'Active sessions count',
+    ['limit_type']
+)
+
+session_hands_total = Counter(
+    'session_hands_total',
+    'Total hands in session',
+    ['session_id', 'limit_type']
+)
+
+session_profit_total = Gauge(
+    'session_profit_total',
+    'Total profit in session',
+    ['session_id', 'limit_type']
+)
+
+session_rake_total = Gauge(
+    'session_rake_total',
+    'Total rake in session',
+    ['session_id', 'limit_type']
+)
+
+# Week 3: Decision метрики (расширенные)
+decision_errors_total = Counter(
+    'decision_errors_total',
+    'Total decision errors',
+    ['limit_type', 'error_type']
+)
+
+decision_p95_latency_seconds = Histogram(
+    'decision_p95_latency_seconds',
+    'Decision latency p95',
+    ['limit_type'],
+    buckets=[0.01, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0]
+)
+
+decision_p99_latency_seconds = Histogram(
+    'decision_p99_latency_seconds',
+    'Decision latency p99',
+    ['limit_type'],
+    buckets=[0.01, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0]
+)
+
 # Cache метрики
 cache_hits_total = Counter(
     'cache_hits_total',

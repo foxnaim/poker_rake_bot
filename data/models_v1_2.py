@@ -16,6 +16,7 @@ class APIKey(Base):
     api_secret = Column(String(255), nullable=False)
     client_name = Column(String(100), nullable=False)
     permissions = Column(ARRAY(Text), default=['decide_only', 'log_only'])
+    is_admin = Column(Boolean, default=False, index=True)  # Week 2: admin flag
     rate_limit_per_minute = Column(Integer, default=120)
     is_active = Column(Boolean, default=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)

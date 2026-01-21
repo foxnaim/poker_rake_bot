@@ -76,6 +76,11 @@ async def decide_endpoint(
             action=decision["action"]
         ).inc()
         
+        # Обновляем p95/p99 метрики
+        from api.metrics import decision_p95_latency_seconds, decision_p99_latency_seconds
+        decision_p95_latency_seconds.labels(limit_type=request.limit_type).observe(latency_ms / 1000.0)
+        decision_p99_latency_seconds.labels(limit_type=request.limit_type).observe(latency_ms / 1000.0)
+        
         # Отправляем через WebSocket
         await broadcast_decision({
             "hand_id": request.hand_id,
@@ -94,4 +99,7 @@ async def decide_endpoint(
         )
     
     except Exception as e:
+        # Обновляем метрики ошибок
+        from api.metrics import decision_errors_total
+        decision_errors_total.labels(limit_type=request.limit_type, error_type=type(e).__name__).inc()
         raise HTTPException(status_code=500, detail=str(e))

@@ -88,7 +88,8 @@ CREATE TABLE IF NOT EXISTS bot_stats (
     session_id VARCHAR(100) NOT NULL,
     limit_type VARCHAR(20) NOT NULL,
     period_start TIMESTAMP NOT NULL,
-    period_end TIMESTAMP NOT NULL,
+    -- NULL = активная сессия (закрывается при /session/end)
+    period_end TIMESTAMP NULL,
     hands_played INTEGER DEFAULT 0,
     vpip DECIMAL(5, 2) DEFAULT 0,
     pfr DECIMAL(5, 2) DEFAULT 0,
@@ -103,4 +104,5 @@ CREATE TABLE IF NOT EXISTS bot_stats (
 
 CREATE INDEX idx_bot_stats_session_id ON bot_stats(session_id);
 CREATE INDEX idx_bot_stats_limit_type ON bot_stats(limit_type);
+-- Индекс по периоду: period_end может быть NULL для активной сессии
 CREATE INDEX idx_bot_stats_period ON bot_stats(period_start, period_end);

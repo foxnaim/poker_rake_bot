@@ -77,6 +77,57 @@ class APIKeyAuth:
         
         return False
     
+    def get_permissions(self, api_key: Optional[str]) -> list:
+        """
+        Получает список permissions для API ключа
+        
+        Args:
+            api_key: API ключ
+            
+        Returns:
+            Список permissions
+        """
+        if not api_key:
+            return []
+        
+        # Проверяем в БД
+        from data.database import SessionLocal
+        from data.models_v1_2 import APIKey
+        
+        db = SessionLocal()
+        try:
+            key = db.query(APIKey).filter(
+                APIKey.api_key == api_key,
+                APIKey.is_active == True
+            ).first()
+            
+            if key:
+                permissions = list(key.permissions) if key.permissions else []
+                
+                # Проверяем is_admin (если поле существует)
+                if hasattr(key, 'is_admin') and key.is_admin:
+                    if 'admin' not in permissions:
+                        permissions.append('admin')
+                
+                return permissions
+        finally:
+            db.close()
+        
+        return []
+    
+    def is_admin(self, api_key: Optional[str]) -> bool:
+        """
+        Проверяет, является ли ключ admin
+        
+        Args:
+            api_key: API ключ
+            
+        Returns:
+            True если ключ имеет admin права
+        """
+        permissions = self.get_permissions(api_key)
+        return 'admin' in permissions
+    
     def add_key(self, api_key: str):
         """Добавляет новый API ключ"""
         self.valid_keys.add(api_key)
@@ -131,9 +182,8 @@ def require_admin(api_key: Optional[str] = Security(api_key_header)):
             detail="Invalid or missing API key"
         )
     
-    # Проверяем права (в production из БД)
-    permissions = api_key_auth.get_permissions(api_key)
-    if "admin" not in permissions:
+    # Проверяем права
+    if not api_key_auth.is_admin(api_key):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"

@@ -84,3 +84,17 @@ CREATE TABLE IF NOT EXISTS alerts (
 
 CREATE INDEX idx_alerts_type ON alerts(alert_type);
 CREATE INDEX idx_alerts_resolved ON alerts(is_resolved);
+
+-- v1.3 hotfix: bot_stats.period_end должен быть nullable (NULL = активная сессия)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'bot_stats'
+          AND column_name = 'period_end'
+          AND is_nullable = 'NO'
+    ) THEN
+        ALTER TABLE bot_stats ALTER COLUMN period_end DROP NOT NULL;
+    END IF;
+END $$;

@@ -18,11 +18,12 @@ training_state = {
     "current_iteration": 0,
     "total_iterations": 0,
     "format": None,
-    "start_time": None
+    "start_time": None,
+    "stop_requested": False
 }
 
 
-def run_training(format: str, iterations: int, db: Session):
+def run_training(format: str, iterations: int, checkpoint_interval: int = 2000):
     """
     Запускает обучение в фоновом режиме
     """
@@ -34,62 +35,69 @@ def run_training(format: str, iterations: int, db: Session):
         training_state["total_iterations"] = iterations
         training_state["format"] = format
         training_state["start_time"] = datetime.utcnow()
+        training_state["stop_requested"] = False
 
-        # Импортируем trainer
-        from training.mccfr_trainer import MCCFRTrainer
-
-        # Создаем trainer
-        trainer = MCCFRTrainer(
-            game_format=format,
-            max_players=6,
-            exploration_param=0.3
-        )
-
-        # Запускаем обучение с прогрессом
-        print(f"Starting training: {format} for {iterations} iterations")
-
-        for i in range(iterations):
-            trainer.train_iteration()
-            training_state["current_iteration"] = i + 1
-
-            # Сохраняем чекпоинт каждые 10000 итераций
-            if (i + 1) % 10000 == 0:
-                checkpoint_path = f"checkpoints/{format}_iter_{i+1}.msgpack"
-                os.makedirs("checkpoints", exist_ok=True)
-                trainer.save_strategy(checkpoint_path)
-
-                # Сохраняем в БД
-                from data.models import TrainingCheckpoint
-                checkpoint = TrainingCheckpoint(
-                    checkpoint_id=f"{format}_{i+1}",
-                    version="1.0",
-                    format=format,
-                    training_iterations=i + 1,
-                    file_path=checkpoint_path,
-                    is_active=False
-                )
-                db.add(checkpoint)
-                db.commit()
-
-                print(f"Checkpoint saved at iteration {i+1}")
-
-        # Финальное сохранение
-        final_checkpoint_path = f"checkpoints/{format}_final_{iterations}.msgpack"
-        trainer.save_strategy(final_checkpoint_path)
-
+        # Реальный training pipeline проекта: MCCFR + GameTree + save_checkpoint (pickle)
+        from pathlib import Path
+        from brain.game_tree import GameTree
+        from brain.mccfr import MCCFR
+        from data.database import SessionLocal, init_db
         from data.models import TrainingCheckpoint
-        final_checkpoint = TrainingCheckpoint(
-            checkpoint_id=f"{format}_final_{iterations}",
-            version="1.0",
-            format=format,
-            training_iterations=iterations,
-            file_path=final_checkpoint_path,
-            is_active=True  # Активируем финальный чекпоинт
-        )
-        db.add(final_checkpoint)
-        db.commit()
+        from training.train_mccfr import save_checkpoint
 
-        print(f"Training completed: {iterations} iterations")
+        init_db()
+
+        max_raise_sizes = {
+            0: 2,  # PREFLOP
+            1: 2,  # FLOP
+            2: 3,  # TURN
+            3: 3   # RIVER
+        }
+
+        game_tree = GameTree(max_raise_sizes=max_raise_sizes)
+        mccfr = MCCFR(game_tree, num_players=2)
+
+        checkpoint_dir = Path("checkpoints") / format
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+        print(f"Starting training (MCCFR): {format} for {iterations} iterations")
+
+        iterations_done = 0
+        while iterations_done < iterations:
+            if training_state.get("stop_requested"):
+                print("Training stop requested.")
+                break
+
+            batch = min(checkpoint_interval, iterations - iterations_done)
+            mccfr.train(batch, verbose=True)
+            iterations_done += batch
+            training_state["current_iteration"] = iterations_done
+
+            # Сохраняем чекпоинт (и запись в БД делается внутри save_checkpoint)
+            checkpoint_path = save_checkpoint(
+                mccfr=mccfr,
+                game_tree=game_tree,
+                format_type=format,
+                iteration=iterations_done,
+                checkpoint_dir=checkpoint_dir
+            )
+            print(f"Checkpoint saved: {checkpoint_path}")
+
+        # Активируем последний чекпоинт этого формата
+        db = SessionLocal()
+        try:
+            last_checkpoint = db.query(TrainingCheckpoint).filter(
+                TrainingCheckpoint.format == format
+            ).order_by(TrainingCheckpoint.created_at.desc()).first()
+            if last_checkpoint:
+                db.query(TrainingCheckpoint).filter(
+                    TrainingCheckpoint.format == format
+                ).update({"is_active": False})
+                last_checkpoint.is_active = True
+                db.commit()
+                print(f"Activated checkpoint: {last_checkpoint.checkpoint_id}")
+        finally:
+            db.close()
 
     except Exception as e:
         print(f"Training error: {e}")
@@ -102,6 +110,7 @@ def run_training(format: str, iterations: int, db: Session):
         training_state["total_iterations"] = 0
         training_state["format"] = None
         training_state["start_time"] = None
+        training_state["stop_requested"] = False
 
 
 @router.post("/training/start", response_model=TrainingStartResponse)
@@ -138,7 +147,7 @@ async def start_training(
         )
 
     # Запускаем обучение в фоновом режиме
-    background_tasks.add_task(run_training, request.format, request.iterations, db)
+    background_tasks.add_task(run_training, request.format, request.iterations)
 
     return {
         "status": "started",
@@ -198,9 +207,8 @@ async def stop_training():
             detail="Обучение не запущено"
         )
 
-    # Устанавливаем флаг остановки
-    # (В реальной реализации нужен более сложный механизм)
-    training_state["total_iterations"] = training_state["current_iteration"]
+    # Просим корректно остановиться на границе батча
+    training_state["stop_requested"] = True
 
     return {
         "status": "stopping",

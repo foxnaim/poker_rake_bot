@@ -19,6 +19,7 @@ class APIKeyCreate(BaseModel):
     client_name: str
     permissions: List[str] = ["decide_only", "log_only"]
     rate_limit_per_minute: int = 120
+    is_admin: bool = False  # Week 2: admin flag
     expires_at: Optional[str] = None
 
 
@@ -29,6 +30,7 @@ class APIKeyResponse(BaseModel):
     api_secret: str
     client_name: str
     permissions: List[str]
+    is_admin: bool = False
     rate_limit_per_minute: int
     is_active: bool
     created_at: str
@@ -55,6 +57,7 @@ async def create_api_key(
         api_secret=api_secret,
         client_name=request.client_name,
         permissions=request.permissions,
+        is_admin=request.is_admin,
         rate_limit_per_minute=request.rate_limit_per_minute,
         is_active=True
     )
@@ -88,11 +91,12 @@ async def list_api_keys(
             key_id=k.key_id,
             api_key=k.api_key,
             api_secret="***hidden***",  # Не показываем секрет
-            client_name=k.client_name,
-            permissions=k.permissions,
-            rate_limit_per_minute=k.rate_limit_per_minute,
-            is_active=k.is_active,
-            created_at=k.created_at.isoformat()
+        client_name=k.client_name,
+        permissions=k.permissions,
+        is_admin=getattr(k, 'is_admin', False),
+        rate_limit_per_minute=k.rate_limit_per_minute,
+        is_active=k.is_active,
+        created_at=k.created_at.isoformat()
         )
         for k in keys
     ]

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 from api.schemas import SessionCreate, SessionEnd, SessionResponse, SessionStartResponse, SessionEndResponse, SessionListItem
 from data.database import get_db
@@ -106,19 +106,37 @@ async def end_session(
         total_pot = sum(float(h.pot_size) for h in hands)
 
         # Вычисляем bb/100
-        big_blind = 1.0  # Для NL10
+        big_blind = 1.0  # Для NL10 (TODO: получать из limit_type)
         if session.hands_played > 0:
             session.winrate_bb_100 = (total_profit / session.hands_played) * 100 / big_blind
+            session.profit_bb_100 = (total_profit / session.hands_played) * 100 / big_blind
 
         session.total_rake = total_rake
 
-        # Rake per hour
+        # Rake per hour и hands per hour
         duration_hours = (session.period_end - session.period_start).total_seconds() / 3600
         if duration_hours > 0:
             session.rake_per_hour = total_rake / duration_hours
+            session.hands_per_hour = session.hands_played / duration_hours
+        
+        # Rake per 100 hands
+        if session.hands_played > 0:
+            session.rake_100 = (total_rake / session.hands_played) * 100
 
         # Средний размер пота
         session.avg_pot_size = total_pot / session.hands_played if session.hands_played > 0 else 0
+        
+        # Обновляем Prometheus метрики
+        from api.metrics import (
+            bot_rake_100, bot_profit_bb_100, bot_hands_per_hour,
+            session_hands_total, session_profit_total, session_rake_total
+        )
+        bot_rake_100.labels(limit_type=session.limit_type, session_id=session.session_id).set(float(session.rake_100))
+        bot_profit_bb_100.labels(limit_type=session.limit_type, session_id=session.session_id).set(float(session.profit_bb_100))
+        bot_hands_per_hour.labels(limit_type=session.limit_type, session_id=session.session_id).set(float(session.hands_per_hour))
+        session_hands_total.labels(session_id=session.session_id, limit_type=session.limit_type).inc(len(hands))
+        session_profit_total.labels(session_id=session.session_id, limit_type=session.limit_type).set(total_profit)
+        session_rake_total.labels(session_id=session.session_id, limit_type=session.limit_type).set(total_rake)
 
     # Или используем переданные данные
     if request.hands_played is not None:
@@ -130,6 +148,10 @@ async def end_session(
 
     db.commit()
     db.refresh(session)
+    
+    # Обновляем метрики - сессия завершена
+    from api.metrics import session_active
+    session_active.labels(limit_type=session.limit_type).dec()
 
     return {
         "status": "ended",
@@ -150,9 +172,10 @@ async def get_session(
     """
     Получает информацию о сессии
 
-    Работает как для активных, так и для завершенных сессий
+    Работает как для активных, так и для завершенных сессий.
+    Для активных сессий вычисляет статистику в реальном времени.
     """
-    from data.models import BotStats
+    from data.models import BotStats, Hand
 
     session = db.query(BotStats).filter(
         BotStats.session_id == session_id
@@ -163,6 +186,49 @@ async def get_session(
             status_code=404,
             detail=f"Сессия {session_id} не найдена"
         )
+
+    # Если сессия активна, обновляем статистику в реальном времени
+    if session.period_end is None:
+        period_end = datetime.utcnow()
+        hands = db.query(Hand).filter(
+            Hand.created_at >= session.period_start,
+            Hand.created_at <= period_end,
+            Hand.limit_type == session.limit_type
+        ).all()
+        
+        if hands:
+            session.hands_played = len(hands)
+            total_profit = sum(float(h.hero_result) for h in hands)
+            total_rake = sum(float(h.rake_amount) for h in hands)
+            total_pot = sum(float(h.pot_size) for h in hands)
+            
+            big_blind = 1.0  # TODO: получать из limit_type
+            if session.hands_played > 0:
+                session.winrate_bb_100 = (total_profit / session.hands_played) * 100 / big_blind
+                session.profit_bb_100 = (total_profit / session.hands_played) * 100 / big_blind
+                session.rake_100 = (total_rake / session.hands_played) * 100
+            
+            session.total_rake = total_rake
+            
+            duration_hours = (period_end - session.period_start).total_seconds() / 3600
+            if duration_hours > 0:
+                session.rake_per_hour = total_rake / duration_hours
+                session.hands_per_hour = session.hands_played / duration_hours
+            
+            session.avg_pot_size = total_pot / session.hands_played if session.hands_played > 0 else 0
+            
+            # Обновляем Prometheus метрики для активной сессии
+            from api.metrics import (
+                bot_rake_100, bot_profit_bb_100, bot_hands_per_hour,
+                session_active, session_hands_total, session_profit_total, session_rake_total
+            )
+            bot_rake_100.labels(limit_type=session.limit_type, session_id=session.session_id).set(float(session.rake_100))
+            bot_profit_bb_100.labels(limit_type=session.limit_type, session_id=session.session_id).set(float(session.profit_bb_100))
+            bot_hands_per_hour.labels(limit_type=session.limit_type, session_id=session.session_id).set(float(session.hands_per_hour))
+            session_active.labels(limit_type=session.limit_type).set(1.0)
+            session_hands_total.labels(session_id=session.session_id, limit_type=session.limit_type).inc(len(hands))
+            session_profit_total.labels(session_id=session.session_id, limit_type=session.limit_type).set(total_profit)
+            session_rake_total.labels(session_id=session.session_id, limit_type=session.limit_type).set(total_rake)
 
     return SessionResponse(
         session_id=session.session_id,
@@ -175,8 +241,11 @@ async def get_session(
         three_bet_pct=float(session.three_bet_pct),
         aggression_factor=float(session.aggression_factor),
         winrate_bb_100=float(session.winrate_bb_100),
+        profit_bb_100=float(session.profit_bb_100 or session.winrate_bb_100),
         total_rake=float(session.total_rake),
         rake_per_hour=float(session.rake_per_hour),
+        rake_100=float(session.rake_100 or 0),
+        hands_per_hour=float(session.hands_per_hour or 0),
         avg_pot_size=float(session.avg_pot_size)
     )
 

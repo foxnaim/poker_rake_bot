@@ -50,4 +50,5 @@ schedule==1.2.0
 
 # Table Agent
 aiohttp==3.9.1
+websockets==12.0  # Week 3: Agent protocol WebSocket support
 pyautogui==0.9.54  # для Desktop клиентов (опционально)
