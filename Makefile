@@ -11,16 +11,25 @@ help:
 	@echo "  make migrate    - Применить миграции БД"
 
 install:
-	pip install -r requirements.txt
+	python3 -m pip install -r requirements.txt
 
-test:
-	pytest tests/ -v
+check-deps:
+	@echo "Проверяю зависимости..."
+	@python3 -c "import httpx" 2>/dev/null || (echo "❌ httpx не установлен. Запустите: make install" && exit 1)
+	@python3 -c "import pytest" 2>/dev/null || (echo "⚠️  pytest не установлен. Тесты будут пропущены." && exit 0)
+	@echo "✅ Основные зависимости установлены"
+
+test: check-deps
+	python3 -m pytest tests/ -v
 
 run:
-	uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+	python3 -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
-smoke:
-	python -m utils.smoke --api http://localhost:8000 --table-key table_1 --limit NL10
+smoke: check-deps
+	@echo "Проверяю что API запущен на http://localhost:8000..."
+	@curl -s http://localhost:8000/api/v1/health > /dev/null || (echo "❌ API не запущен! Запустите: make run" && exit 1)
+	@echo "✅ API доступен, запускаю smoke-тест..."
+	python3 -m utils.smoke --api http://localhost:8000 --table-key table_1 --limit NL10
 
 docker-up:
 	docker-compose up -d

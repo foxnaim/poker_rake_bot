@@ -11,10 +11,17 @@ Smoke-тест API без Docker.
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from typing import Any, Dict, Optional
 
-import httpx
+try:
+    import httpx
+except ImportError:
+    print("❌ Ошибка: httpx не установлен.", file=sys.stderr)
+    print("Установите зависимости: pip install -r requirements.txt", file=sys.stderr)
+    print("Или конкретно: pip install httpx", file=sys.stderr)
+    sys.exit(1)
 
 
 def _now_hand_id() -> str:
