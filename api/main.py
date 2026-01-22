@@ -98,6 +98,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Security headers (опционально, включается через env)
+if os.getenv("ENABLE_SECURITY_HEADERS", "false").lower() == "true":
+    from utils.security_headers import SecurityHeadersMiddleware
+    app.add_middleware(SecurityHeadersMiddleware)
+
 
 @app.on_event("startup")
 async def startup_event():

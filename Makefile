@@ -11,6 +11,8 @@ help:
 	@echo "  make test-e2e   - Запустить E2E тест операторского flow"
 	@echo "  make test-load  - Запустить load test (требует запущенный API)"
 	@echo "  make test-simulator-load - Тесты симулятора под нагрузкой"
+	@echo "  make test-monitoring - Тесты мониторинга"
+	@echo "  make backup-setup - Настроить автоматические бэкапы"
 	@echo "  make run        - Запустить API локально"
 	@echo "  make smoke      - Быстрый smoke API (нужен запущенный API)"
 	@echo "  make docker-up  - Запустить через Docker Compose"
@@ -42,6 +44,16 @@ test-load: check-deps
 test-simulator-load:
 	@echo "Запуск тестов симулятора под нагрузкой..."
 	python3 -m pytest tests/test_simulator_load.py -v
+
+test-monitoring: check-deps
+	@echo "Запуск тестов мониторинга..."
+	python3 -m pytest tests/test_monitoring.py -v
+
+backup-setup:
+	@echo "Настройка автоматических бэкапов..."
+	@echo "Выберите метод:"
+	@echo "  python3 scripts/setup_backup_scheduler.py --method systemd"
+	@echo "  python3 scripts/setup_backup_scheduler.py --method cron"
 
 run:
 	python3 -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000

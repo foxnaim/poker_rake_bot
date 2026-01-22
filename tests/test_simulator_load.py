@@ -17,13 +17,16 @@ def _sample_action(state):
     # Если нужно коллить
     if current_bet > player_bet:
         if player_stack <= (current_bet - player_bet):
-            return "all_in"
-        return random.choice(["call", "fold"])
+            return ("all_in", None)
+        return (random.choice(["call", "fold"]), None)
     
     # Можно чекнуть или рейзить
-    actions = ["check"]
+    actions = [("check", None)]
     if player_stack > 0:
-        actions.append("raise")
+        # Для raise выбираем случайный размер (минимум big_blind)
+        raise_amount = random.uniform(state.big_blind, min(player_stack, state.big_blind * 3))
+        actions.append(("raise", raise_amount))
+    
     return random.choice(actions)
 
 
@@ -44,8 +47,8 @@ def test_simulator_stability_under_load():
             for _ in range(10):
                 if done:
                     break
-                action = _sample_action(state)
-                state, done, info = env.step(action)
+                action, amount = _sample_action(state)
+                state, done, info = env.step(action, amount)
         except Exception as e:
             errors.append((i, str(e)))
     
@@ -91,8 +94,8 @@ def test_simulator_concurrent_usage():
         for _ in range(20):
             if done:
                 break
-            action = _sample_action(state)
-            state, done, info = env.step(action)
+            action, amount = _sample_action(state)
+            state, done, info = env.step(action, amount)
         return env_id
     
     num_simulations = 50
@@ -126,8 +129,8 @@ def test_simulator_state_consistency():
             pot_before = state.pot
             stacks_before = state.stacks.copy()
             
-            action = _sample_action(state)
-            state, done, info = env.step(action)
+            action, amount = _sample_action(state)
+            state, done, info = env.step(action, amount)
             
             # Проверяем что состояние изменилось корректно
             assert state.pot >= pot_before, "Pot should not decrease"

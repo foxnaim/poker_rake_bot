@@ -1,0 +1,110 @@
+{
+  "dashboard": {
+    "title": "Poker Bot Enhanced Monitoring",
+    "tags": ["poker", "bot", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Decision Latency (P95/P99)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, decision_latency_seconds_bucket)",
+            "legendFormat": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, decision_latency_seconds_bucket)",
+            "legendFormat": "P99"
+          }
+        ],
+        "yaxes": [{"format": "s", "label": "Latency"}]
+      },
+      {
+        "id": 2,
+        "title": "Decisions per Second",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(decisions_total[1m])",
+            "legendFormat": "Decisions/sec"
+          }
+        ],
+        "yaxes": [{"format": "ops", "label": "Rate"}]
+      },
+      {
+        "id": 3,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(decision_errors_total[1m])",
+            "legendFormat": "Errors/sec"
+          }
+        ],
+        "yaxes": [{"format": "ops", "label": "Rate"}]
+      },
+      {
+        "id": 4,
+        "title": "Active Sessions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(bot_sessions_active)",
+            "legendFormat": "Active"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Hands per Hour",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(bot_hands_played_total[1h]) * 3600",
+            "legendFormat": "Hands/hour"
+          }
+        ],
+        "yaxes": [{"format": "short", "label": "Hands"}]
+      },
+      {
+        "id": 6,
+        "title": "Profit (bb/100)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "bot_profit_bb_100",
+            "legendFormat": "{{bot_id}}"
+          }
+        ],
+        "yaxes": [{"format": "short", "label": "bb/100"}]
+      },
+      {
+        "id": 7,
+        "title": "Rake per Hour",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(bot_rake_paid_total[1h]) * 3600",
+            "legendFormat": "{{bot_id}}"
+          }
+        ],
+        "yaxes": [{"format": "currency", "label": "Rake"}]
+      },
+      {
+        "id": 8,
+        "title": "Agent Heartbeat Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "agent_heartbeat_lag_seconds",
+            "legendFormat": "{{agent_id}}"
+          }
+        ]
+      }
+    ],
+    "refresh": "10s",
+    "schemaVersion": 27,
+    "version": 1
+  }
+}
