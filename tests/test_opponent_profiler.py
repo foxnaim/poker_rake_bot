@@ -100,6 +100,12 @@ def test_suggest_exploit_fish():
     # Создаем профиль фиша
     db = SessionLocal()
     try:
+        # Удаляем старый профиль если есть (для идемпотентности теста)
+        existing = db.query(OpponentProfile).filter(OpponentProfile.opponent_id == "test_fish_exploit").first()
+        if existing:
+            db.delete(existing)
+            db.commit()
+        
         profile = OpponentProfile(
             opponent_id="test_fish_exploit",
             vpip=45.0,

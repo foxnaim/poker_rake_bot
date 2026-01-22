@@ -306,14 +306,30 @@ class APIKey(Base):
     """API ключи для аутентификации агентов"""
     __tablename__ = "api_keys"
 
-    id = Column(Integer, primary_key=True, index=True)
-    key = Column(String(100), unique=True, nullable=False, index=True)
-    name = Column(String(100), nullable=False)
-    permissions = Column(JSON, nullable=False, default=list)  # ['agent', 'read', 'write', 'admin']
+    key_id = Column(Integer, primary_key=True, index=True)  # Соответствует key_id в миграциях
+    api_key = Column(String(255), unique=True, nullable=False, index=True)  # Соответствует api_key в миграциях
+    api_secret = Column(String(255), nullable=False)  # Соответствует api_secret в миграциях
+    client_name = Column(String(100), nullable=False)  # Соответствует client_name в миграциях
+    permissions = Column(ARRAY(String).with_variant(JSON, "sqlite"), nullable=False, default=list)  # TEXT[] в PostgreSQL, JSON в SQLite
+    rate_limit_per_minute = Column(Integer, default=120)  # Соответствует rate_limit_per_minute в миграциях
     is_active = Column(Boolean, default=True, index=True)
-    last_used = Column(DateTime(timezone=True), nullable=True)
+    is_admin = Column(Boolean, default=False, index=True)  # Добавлено в migrations_v1_3_week2.sql
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_used = Column(DateTime(timezone=True), nullable=True)
     expires_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Для обратной совместимости (если код использует .id или .key)
+    @property
+    def id(self):
+        return self.key_id
+    
+    @property
+    def key(self):
+        return self.api_key
+    
+    @property
+    def name(self):
+        return self.client_name
 
 
 class AuditLog(Base):
