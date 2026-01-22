@@ -302,6 +302,20 @@ class Agent(Base):
     assigned_session = relationship("BotSession", back_populates="agents")
 
 
+class APIKey(Base):
+    """API ключи для аутентификации агентов"""
+    __tablename__ = "api_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String(100), unique=True, nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    permissions = Column(JSON, nullable=False, default=list)  # ['agent', 'read', 'write', 'admin']
+    is_active = Column(Boolean, default=True, index=True)
+    last_used = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+
+
 class AuditLog(Base):
     """Модель аудита"""
     __tablename__ = "audit_log"

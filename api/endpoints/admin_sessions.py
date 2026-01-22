@@ -17,13 +17,13 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin", "sessions"])
 
 class SessionStartRequest(BaseModel):
     """Запрос на старт сессии"""
-    bot_id: int
+    bot_id: int = Field(..., gt=0, description="ID бота (должен быть > 0)")
     # Можно указать либо table_id (PK), либо table_key (строковый ключ для агента)
-    table_id: Optional[int] = None
-    table_key: Optional[str] = None
-    limit: str
-    style: Optional[str] = None  # Если не указан, используется default_style бота
-    bot_config_id: Optional[int] = None  # Если не указан, используется default config
+    table_id: Optional[int] = Field(None, gt=0, description="ID стола (PK, опционально)")
+    table_key: Optional[str] = Field(None, min_length=1, max_length=100, description="Ключ стола (опционально)")
+    limit: str = Field(..., pattern="^NL\\d+$", description="Лимит игры (NL10, NL50, etc.)")
+    style: Optional[str] = Field(None, max_length=50, description="Стиль игры (если не указан, используется default_style бота)")
+    bot_config_id: Optional[int] = Field(None, gt=0, description="ID конфига бота (если не указан, используется default config)")
 
 
 class SessionStartResponse(BaseModel):

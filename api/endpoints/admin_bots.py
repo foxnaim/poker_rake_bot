@@ -16,10 +16,10 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin", "bots"])
 
 class BotCreate(BaseModel):
     """Создание бота"""
-    alias: str
-    default_style: str = "balanced"
-    default_limit: str = "NL10"
-    active: bool = True
+    alias: str = Field(..., min_length=1, max_length=100, description="Алиас бота (уникальный)")
+    default_style: str = Field(default="balanced", pattern="^(balanced|aggressive|tight|loose)$", description="Стиль игры по умолчанию")
+    default_limit: str = Field(default="NL10", pattern="^NL\\d+$", description="Лимит по умолчанию (NL10, NL50, etc.)")
+    active: bool = Field(default=True, description="Активен ли бот")
 
 
 class BotUpdate(BaseModel):

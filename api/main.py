@@ -87,10 +87,12 @@ app.add_middleware(
     requests_per_minute=(1000000 if _testing else 120),
 )
 
-# CORS
+# CORS (читаем из env, по умолчанию "*" для dev)
+_cors_origins_str = os.getenv("CORS_ORIGINS", "*")
+_cors_origins = ["*"] if _cors_origins_str == "*" else [origin.strip() for origin in _cors_origins_str.split(",")]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # В продакшене указать конкретные домены
+    allow_origins=_cors_origins,  # В продакшене указать конкретные домены через CORS_ORIGINS env
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

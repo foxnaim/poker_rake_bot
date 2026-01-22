@@ -3,7 +3,9 @@
 help:
 	@echo "Доступные команды:"
 	@echo "  make install    - Установить зависимости"
-	@echo "  make test       - Запустить тесты"
+	@echo "  make check-deps - Проверить что зависимости установлены"
+	@echo "  make test       - Запустить все тесты"
+	@echo "  make test-e2e   - Запустить E2E тест операторского flow"
 	@echo "  make run        - Запустить API локально"
 	@echo "  make smoke      - Быстрый smoke API (нужен запущенный API)"
 	@echo "  make docker-up  - Запустить через Docker Compose"
@@ -21,6 +23,10 @@ check-deps:
 
 test: check-deps
 	python3 -m pytest tests/ -v
+
+test-e2e: check-deps
+	@echo "Запуск E2E теста (требует ENABLE_ADMIN_API=1)..."
+	ENABLE_ADMIN_API=1 python3 -m pytest tests/test_e2e_operator_flow.py -v
 
 run:
 	python3 -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000

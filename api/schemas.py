@@ -7,25 +7,25 @@ from datetime import datetime
 
 class GameStateRequest(BaseModel):
     """Запрос состояния игры для принятия решения"""
-    hand_id: str
-    table_id: str
-    limit_type: str = Field(default="NL10", description="Лимит игры (NL10, NL50)")
-    session_id: Optional[str] = Field(None, description="ID сессии бота (для привязки к session)")
-    street: str = Field(description="Улица: preflop, flop, turn, river")
-    hero_position: int = Field(description="Позиция героя (0-5)")
-    dealer: int = Field(description="Позиция дилера (0-5)")
-    hero_cards: str = Field(description="Карты героя (например, 'AsKh')")
-    board_cards: Optional[str] = Field(default="", description="Карты на борде")
-    stacks: Dict[str, float] = Field(description="Стеки игроков {player_id: stack}")
-    bets: Dict[str, float] = Field(description="Ставки в текущем раунде")
-    total_bets: Dict[str, float] = Field(description="Общие ставки игроков")
-    active_players: List[int] = Field(description="Активные игроки")
-    pot: float = Field(description="Размер пота")
-    current_player: int = Field(description="Текущий игрок")
-    last_raise_amount: float = Field(default=0.0, description="Размер последнего рейза")
-    small_blind: float = Field(default=0.5)
-    big_blind: float = Field(default=1.0)
-    opponent_ids: Optional[List[str]] = Field(default=None, description="ID оппонентов")
+    hand_id: str = Field(..., min_length=1, max_length=100, description="Уникальный ID раздачи")
+    table_id: str = Field(..., min_length=1, max_length=100, description="ID стола (table_key)")
+    limit_type: str = Field(default="NL10", pattern="^NL\\d+$", description="Лимит игры (NL10, NL50, etc.)")
+    session_id: Optional[str] = Field(None, max_length=100, description="ID сессии бота (для привязки к session)")
+    street: str = Field(..., pattern="^(preflop|flop|turn|river)$", description="Улица: preflop, flop, turn, river")
+    hero_position: int = Field(..., ge=0, le=5, description="Позиция героя (0-5)")
+    dealer: int = Field(..., ge=0, le=5, description="Позиция дилера (0-5)")
+    hero_cards: str = Field(..., min_length=4, max_length=10, description="Карты героя (например, 'AsKh')")
+    board_cards: Optional[str] = Field(default="", max_length=20, description="Карты на борде")
+    stacks: Dict[str, float] = Field(..., description="Стеки игроков {player_id: stack}")
+    bets: Dict[str, float] = Field(..., description="Ставки в текущем раунде")
+    total_bets: Dict[str, float] = Field(..., description="Общие ставки игроков")
+    active_players: List[int] = Field(..., min_length=2, max_length=6, description="Активные игроки")
+    pot: float = Field(..., ge=0.0, description="Размер пота")
+    current_player: int = Field(..., ge=0, le=5, description="Текущий игрок")
+    last_raise_amount: float = Field(default=0.0, ge=0.0, description="Размер последнего рейза")
+    small_blind: float = Field(default=0.5, gt=0.0, description="Small blind")
+    big_blind: float = Field(default=1.0, gt=0.0, description="Big blind")
+    opponent_ids: Optional[List[str]] = Field(default=None, max_length=10, description="ID оппонентов")
 
 
 class DecisionResponse(BaseModel):
@@ -40,22 +40,23 @@ class DecisionResponse(BaseModel):
 
 class HandLogRequest(BaseModel):
     """Запрос для логирования раздачи"""
-    hand_id: str
-    table_id: str
+    hand_id: str = Field(..., min_length=1, max_length=100, description="Уникальный ID раздачи")
+    table_id: str = Field(..., min_length=1, max_length=100, description="ID стола")
     table_key: Optional[str] = Field(
         default=None,
+        max_length=100,
         description="Человеко/agent-friendly ключ стола (Table.external_table_id). Если задан, предпочтительнее table_id.",
     )
-    limit_type: str
-    session_id: Optional[str] = Field(None, description="ID сессии бота (для привязки к session)")
-    players_count: int
-    hero_position: int
-    hero_cards: str
-    board_cards: Optional[str] = ""
-    pot_size: float
-    rake_amount: float
-    hero_result: float
-    hand_history: Optional[Dict] = None
+    limit_type: str = Field(..., pattern="^NL\\d+$", description="Лимит игры (NL10, NL50, etc.)")
+    session_id: Optional[str] = Field(None, max_length=100, description="ID сессии бота (для привязки к session)")
+    players_count: int = Field(..., ge=2, le=6, description="Количество игроков (2-6)")
+    hero_position: int = Field(..., ge=0, le=5, description="Позиция героя (0-5)")
+    hero_cards: str = Field(..., min_length=4, max_length=10, description="Карты героя (например, 'AsKh')")
+    board_cards: Optional[str] = Field(default="", max_length=20, description="Карты на борде")
+    pot_size: float = Field(..., ge=0.0, description="Размер пота")
+    rake_amount: float = Field(default=0.0, ge=0.0, description="Рейк (если 0, будет вычислен автоматически)")
+    hero_result: float = Field(..., description="Результат героя (может быть отрицательным)")
+    hand_history: Optional[Dict] = Field(default=None, description="История раздачи (для профилирования оппонентов)")
 
 
 class OpponentProfileResponse(BaseModel):

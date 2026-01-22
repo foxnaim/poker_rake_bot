@@ -16,23 +16,23 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin", "tables"])
 
 class TableCreate(BaseModel):
     """Создание стола"""
-    room_id: int
+    room_id: int = Field(..., gt=0, description="ID комнаты (должен быть > 0)")
     # для UI/агента: строковый ключ стола (например "table_1", "pp_123")
-    table_key: Optional[str] = None
+    table_key: Optional[str] = Field(None, min_length=1, max_length=100, description="Ключ стола для UI/агента")
     # backward-compat: если кто-то уже шлёт external_table_id
-    external_table_id: Optional[str] = None
-    limit_type: str
-    max_players: int = 6
-    meta: Optional[dict] = None
+    external_table_id: Optional[str] = Field(None, min_length=1, max_length=100, description="Внешний ID стола (устаревшее, используйте table_key)")
+    limit_type: str = Field(..., pattern="^NL\\d+$", description="Лимит игры (NL10, NL50, etc.)")
+    max_players: int = Field(default=6, ge=2, le=6, description="Максимум игроков (2-6)")
+    meta: Optional[dict] = Field(default=None, description="Дополнительные метаданные (JSON)")
 
 
 class TableUpdate(BaseModel):
     """Обновление стола"""
-    table_key: Optional[str] = None
-    external_table_id: Optional[str] = None
-    limit_type: Optional[str] = None
-    max_players: Optional[int] = None
-    meta: Optional[dict] = None
+    table_key: Optional[str] = Field(None, min_length=1, max_length=100, description="Ключ стола для UI/агента")
+    external_table_id: Optional[str] = Field(None, min_length=1, max_length=100, description="Внешний ID стола (устаревшее)")
+    limit_type: Optional[str] = Field(None, pattern="^NL\\d+$", description="Лимит игры (NL10, NL50, etc.)")
+    max_players: Optional[int] = Field(None, ge=2, le=6, description="Максимум игроков (2-6)")
+    meta: Optional[dict] = Field(default=None, description="Дополнительные метаданные (JSON)")
 
 
 class TableResponse(BaseModel):
