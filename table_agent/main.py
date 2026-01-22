@@ -5,6 +5,7 @@ import asyncio
 import argparse
 import signal
 import sys
+import time
 from typing import Optional
 
 from .connection import ConnectionConfig
@@ -211,6 +212,183 @@ class TableAgentRunner:
             except KeyboardInterrupt:
                 break
 
+    async def run_auto_play(self):
+        """Автоматический режим игры - постоянно читает экран и отправляет решения"""
+        if not self.screen_reader:
+            print("❌ Screen reader not enabled. Use --screen-reader flag.")
+            return
+
+        print("\n🎮 Auto-play mode started")
+        print("   Reading screen and making decisions automatically...")
+        print("   Press Ctrl+C to stop\n")
+
+        last_hand_id = None
+        hand_start_time = None
+        hand_counter = 0
+
+        while self.running:
+            try:
+                # Читаем состояние стола с экрана
+                table_state = await asyncio.get_event_loop().run_in_executor(
+                    None, self.screen_reader.read_table_state
+                )
+
+                if not table_state or "error" in table_state:
+                    # Нет активной игры или ошибка чтения
+                    await asyncio.sleep(1)
+                    continue
+
+                # Генерируем hand_id если его нет (для новой раздачи)
+                # Определяем новую раздачу по изменению карт или борда
+                hero_cards = table_state.get("hero_cards", "")
+                board_cards = table_state.get("board_cards", "")
+                # Нормализуем в строки
+                if isinstance(hero_cards, list):
+                    hero_cards = "".join(hero_cards)
+                if isinstance(board_cards, list):
+                    board_cards = "".join(board_cards)
+                state_hash = f"{hero_cards}_{board_cards}"
+
+                # Если состояние изменилось, это новая раздача
+                if not hasattr(self, "_last_state_hash") or self._last_state_hash != state_hash:
+                    if hasattr(self, "_last_state_hash") and self._last_state_hash:
+                        # Логируем предыдущую раздачу
+                        if last_hand_id:
+                            await self._log_completed_hand(last_hand_id, hand_start_time, table_state)
+                    
+                    # Новая раздача
+                    hand_counter += 1
+                    last_hand_id = f"hand_{int(time.time())}_{hand_counter}"
+                    hand_start_time = time.time()
+                    self._last_state_hash = state_hash
+                    print(f"🃏 New hand: {last_hand_id}")
+
+                # Формируем GameState для API
+                game_state = self._table_state_to_game_state(table_state, last_hand_id)
+
+                # Отправляем состояние в agent для получения решения
+                decision = await self.agent.process_game_state(game_state)
+
+                if decision:
+                    print(f"✅ Decision: {decision.get('action')} "
+                          f"(latency: {decision.get('latency_ms', 'N/A')}ms)")
+
+                # Небольшая задержка перед следующим чтением
+                await asyncio.sleep(0.5)
+
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                print(f"❌ Error in auto-play loop: {e}")
+                import traceback
+                traceback.print_exc()
+                await asyncio.sleep(2)
+
+        # Логируем последнюю раздачу при остановке
+        if last_hand_id and hand_start_time:
+            table_state = await asyncio.get_event_loop().run_in_executor(
+                None, self.screen_reader.read_table_state
+            )
+            await self._log_completed_hand(last_hand_id, hand_start_time, table_state or {})
+
+    def _table_state_to_game_state(self, table_state: dict, hand_id: str) -> dict:
+        """Конвертирует table_state из screen reader в GameState для API"""
+        # hero_cards и board_cards могут быть строками или списками
+        hero_cards = table_state.get("hero_cards", "")
+        if isinstance(hero_cards, list):
+            hero_cards = "".join(hero_cards)
+        elif not isinstance(hero_cards, str):
+            hero_cards = str(hero_cards)
+        
+        board_cards = table_state.get("board_cards", "")
+        if isinstance(board_cards, list):
+            board_cards = "".join(board_cards)
+        elif not isinstance(board_cards, str):
+            board_cards = str(board_cards)
+        
+        player_stacks = table_state.get("player_stacks", {})
+        player_bets = table_state.get("player_bets", {})
+        
+        # Базовый GameState
+        game_state = {
+            "hand_id": hand_id,
+            "table_id": self.agent_config.table_key or "table_1",
+            "limit_type": self.agent_config.limit_type,
+            "street": self._detect_street(table_state),
+            "hero_position": table_state.get("hero_position", 0),
+            "dealer": table_state.get("dealer", 0),
+            "hero_cards": hero_cards,
+            "board_cards": board_cards,
+            "stacks": {str(i): float(player_stacks.get(i, 100.0)) for i in range(6)},
+            "bets": {str(i): float(player_bets.get(i, 0.0)) for i in range(6)},
+            "total_bets": {str(i): float(player_bets.get(i, 0.0)) for i in range(6)},
+            "active_players": [i for i in range(6) if player_stacks.get(i, 0) > 0],
+            "pot": float(table_state.get("pot", 0.0)),
+            "current_player": table_state.get("current_player", 0),
+            "last_raise_amount": 0.0,
+            "small_blind": 0.5,
+            "big_blind": 1.0
+        }
+        return game_state
+
+    def _detect_street(self, table_state: dict) -> str:
+        """Определяет улицу по количеству карт на борде"""
+        board_cards = table_state.get("board_cards", "")
+        # Нормализуем в строку если это список
+        if isinstance(board_cards, list):
+            board_cards = "".join(board_cards)
+        elif not isinstance(board_cards, str):
+            board_cards = str(board_cards)
+        
+        # Определяем улицу по длине строки (каждая карта = 2 символа)
+        board_len = len(board_cards)
+        if board_len == 0:
+            return "preflop"
+        elif board_len == 6:  # 3 карты * 2 символа
+            return "flop"
+        elif board_len == 8:  # 4 карты * 2 символа
+            return "turn"
+        elif board_len == 10:  # 5 карт * 2 символа
+            return "river"
+        return "preflop"
+
+    async def _log_completed_hand(self, hand_id: str, start_time: float, table_state: dict):
+        """Логировать завершённую раздачу"""
+        try:
+            # Нормализуем hero_cards и board_cards
+            hero_cards = table_state.get("hero_cards", "")
+            board_cards = table_state.get("board_cards", "")
+            if isinstance(hero_cards, list):
+                hero_cards = "".join(hero_cards)
+            if isinstance(board_cards, list):
+                board_cards = "".join(board_cards)
+            
+            active_players = table_state.get("active_players", [])
+            if not isinstance(active_players, list):
+                # Если это dict, берём ключи
+                active_players = list(active_players.keys()) if isinstance(active_players, dict) else []
+            
+            hand_data = {
+                "hand_id": hand_id,
+                "table_id": self.agent_config.table_key or "table_1",
+                "table_key": self.agent_config.table_key,
+                "limit_type": self.agent_config.limit_type,
+                "players_count": len(active_players) if active_players else 2,
+                "hero_position": table_state.get("hero_position", 0),
+                "hero_cards": hero_cards if isinstance(hero_cards, str) else str(hero_cards),
+                "board_cards": board_cards if isinstance(board_cards, str) else str(board_cards),
+                "pot_size": float(table_state.get("pot", 0.0)),
+                "rake_amount": 0.0,  # Будет вычислен автоматически
+                "hero_result": 0.0,  # Нужно определить из результата раздачи
+                "hand_history": None
+            }
+            
+            success = await self.agent.log_hand_result(hand_data)
+            if success:
+                print(f"📝 Logged hand {hand_id} (duration: {time.time() - start_time:.1f}s)")
+        except Exception as e:
+            print(f"⚠️ Failed to log hand {hand_id}: {e}")
+
     async def _send_test_state(self):
         """Отправить тестовое состояние"""
         import random
@@ -295,8 +473,13 @@ def main():
         if await runner.start():
             if args.interactive:
                 await runner.run_interactive()
+            elif args.screen_reader:
+                # Автоматический режим игры
+                await runner.run_auto_play()
             else:
-                # Просто держим соединение
+                # Просто держим соединение (для тестирования без screen reader)
+                print("💡 Tip: Use --screen-reader for auto-play mode")
+                print("   Or use --interactive for manual testing")
                 while runner.running:
                     await asyncio.sleep(1)
 

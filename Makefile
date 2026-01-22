@@ -9,6 +9,8 @@ help:
 	@echo "  make check      - Полная проверка: build + lint + test"
 	@echo "  make test       - Запустить все тесты"
 	@echo "  make test-e2e   - Запустить E2E тест операторского flow"
+	@echo "  make test-load  - Запустить load test (требует запущенный API)"
+	@echo "  make test-simulator-load - Тесты симулятора под нагрузкой"
 	@echo "  make run        - Запустить API локально"
 	@echo "  make smoke      - Быстрый smoke API (нужен запущенный API)"
 	@echo "  make docker-up  - Запустить через Docker Compose"
@@ -30,6 +32,16 @@ test: check-deps
 test-e2e: check-deps
 	@echo "Запуск E2E теста (требует ENABLE_ADMIN_API=1)..."
 	ENABLE_ADMIN_API=1 python3 -m pytest tests/test_e2e_operator_flow.py -v
+
+test-load: check-deps
+	@echo "Запуск load test (требует запущенный API)..."
+	@python3 -c "import httpx" 2>/dev/null || (echo "❌ httpx не установлен. Запустите: make install" && exit 1)
+	@echo "💡 Убедитесь что API запущен: make run"
+	@python3 -m utils.load_test --api http://localhost:8000 --requests 1000 --concurrent 10
+
+test-simulator-load:
+	@echo "Запуск тестов симулятора под нагрузкой..."
+	python3 -m pytest tests/test_simulator_load.py -v
 
 run:
 	python3 -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
