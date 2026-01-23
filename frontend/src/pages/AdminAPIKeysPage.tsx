@@ -196,10 +196,10 @@ const AdminAPIKeysPage: React.FC = () => {
               </div>
             </div>
             <div style={{ color: '#C5C6C7', fontSize: '14px', marginTop: '10px' }}>
-              <div>Permissions: {key.permissions.join(', ')}</div>
-              <div>Rate limit: {key.rate_limit_per_minute} req/min</div>
+              <div>Права: {key.permissions.join(', ')}</div>
+              <div>Лимит запросов: {key.rate_limit_per_minute} запросов/мин</div>
               <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.7 }}>
-                Created: {new Date(key.created_at).toLocaleString()}
+                Создан: {new Date(key.created_at).toLocaleString('ru-RU')}
               </div>
             </div>
           </div>

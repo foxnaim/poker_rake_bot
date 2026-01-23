@@ -79,8 +79,6 @@ services:
     container_name: poker_bot_dashboard
     ports:
       - "3000:3000"
-    environment:
-      REACT_APP_API_URL: http://api:8000
     depends_on:
       - api
     volumes:

@@ -164,7 +164,7 @@ const AdminTablesPage: React.FC = () => {
                     {table.limit_type}
                   </span>
                   <div style={{ color: '#C5C6C7', fontSize: '12px', marginTop: '4px' }}>
-                    Room: {room?.type || `ID ${table.room_id}`}
+                    Комната: {room?.type || `ID ${table.room_id}`}
                   </div>
                 </div>
                 <button

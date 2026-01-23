@@ -55,12 +55,12 @@ const OpponentsPage: React.FC = () => {
 
   const getClassificationLabel = (classification: string) => {
     const labels: {[key: string]: string} = {
-      fish: '🐟 Fish',
-      nit: '🛡️ Nit',
+      fish: '🐟 Рыба',
+      nit: '🛡️ Нитовый',
       tag: '💪 TAG',
       lag: '🔥 LAG',
-      calling_station: '📞 Calling Station',
-      unknown: '❓ Unknown'
+      calling_station: '📞 Коллинг-станция',
+      unknown: '❓ Неизвестно'
     };
     return labels[classification] || labels.unknown;
   };
@@ -72,7 +72,7 @@ const OpponentsPage: React.FC = () => {
   return (
     <div style={pageStyle}>
       <div style={headerStyle}>
-        <h1 style={{ margin: 0 }}>👥 Opponent Profiles</h1>
+        <h1 style={{ margin: 0 }}>👥 Профили оппонентов</h1>
         <div style={filterGroupStyle}>
           {['all', 'fish', 'nit', 'tag', 'lag', 'calling_station'].map(f => (
             <button
@@ -91,11 +91,11 @@ const OpponentsPage: React.FC = () => {
 
       <div style={statsCardStyle}>
         <div style={statItemStyle}>
-          <span style={statLabelStyle}>Total Profiles</span>
+          <span style={statLabelStyle}>Всего профилей</span>
           <span style={statValueStyle}>{opponents.length}</span>
         </div>
         <div style={statItemStyle}>
-          <span style={statLabelStyle}>Avg Hands Played</span>
+          <span style={statLabelStyle}>Среднее раздач</span>
           <span style={statValueStyle}>
             {opponents.length > 0 ? Math.round(opponents.reduce((acc, o) => acc + (o.hands_played || 0), 0) / opponents.length) : 0}
           </span>
@@ -106,13 +106,13 @@ const OpponentsPage: React.FC = () => {
         <table style={tableStyle}>
           <thead>
             <tr style={tableHeaderStyle}>
-              <th style={thStyle}>Player</th>
-              <th style={thStyle}>Type</th>
+              <th style={thStyle}>Игрок</th>
+              <th style={thStyle}>Тип</th>
               <th style={thStyle}>VPIP</th>
               <th style={thStyle}>PFR</th>
-              <th style={thStyle}>3-Bet%</th>
+              <th style={thStyle}>3-Бет%</th>
               <th style={thStyle}>AF</th>
-              <th style={thStyle}>Hands</th>
+              <th style={thStyle}>Раздачи</th>
             </tr>
           </thead>
           <tbody>
@@ -139,7 +139,7 @@ const OpponentsPage: React.FC = () => {
 
         {opponents.length === 0 && (
           <div style={emptyStateStyle}>
-            No opponents found for this filter
+            Оппоненты не найдены для этого фильтра
           </div>
         )}
       </div>

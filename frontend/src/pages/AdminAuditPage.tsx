@@ -108,7 +108,7 @@ const AdminAuditPage: React.FC = () => {
   return (
     <div style={containerStyle}>
       <div style={headerStyle}>
-        <h1 style={{ color: '#66FCF1', margin: 0 }}>Audit Log</h1>
+        <h1 style={{ color: '#66FCF1', margin: 0 }}>Журнал аудита</h1>
         <button onClick={loadData} style={buttonStyle}>
           Обновить
         </button>
@@ -152,12 +152,12 @@ const AdminAuditPage: React.FC = () => {
           style={inputStyle}
         >
           <option value="">Все действия</option>
-          <option value="create">Create</option>
-          <option value="update">Update</option>
-          <option value="delete">Delete</option>
-          <option value="start_session">Start Session</option>
-          <option value="stop_session">Stop Session</option>
-          <option value="pause_session">Pause Session</option>
+          <option value="create">Создать</option>
+          <option value="update">Обновить</option>
+          <option value="delete">Удалить</option>
+          <option value="start_session">Запустить сессию</option>
+          <option value="stop_session">Остановить сессию</option>
+          <option value="pause_session">Приостановить сессию</option>
         </select>
         <select
           value={filters.entity_type}
@@ -165,13 +165,13 @@ const AdminAuditPage: React.FC = () => {
           style={inputStyle}
         >
           <option value="">Все сущности</option>
-          <option value="bot">Bot</option>
-          <option value="room">Room</option>
-          <option value="table">Table</option>
-          <option value="bot_session">Bot Session</option>
-          <option value="bot_config">Bot Config</option>
-          <option value="rake_model">Rake Model</option>
-          <option value="api_key">API Key</option>
+          <option value="bot">Бот</option>
+          <option value="room">Комната</option>
+          <option value="table">Стол</option>
+          <option value="bot_session">Сессия бота</option>
+          <option value="bot_config">Конфиг бота</option>
+          <option value="rake_model">Модель рейка</option>
+          <option value="api_key">API Ключ</option>
         </select>
         <select
           value={filters.limit}
@@ -302,7 +302,7 @@ const AdminAuditPage: React.FC = () => {
                 <span>{selectedEntry.entity_type} #{selectedEntry.entity_id}</span>
               </div>
               <div style={detailItemStyle}>
-                <label style={detailLabelStyle}>Admin Key:</label>
+                <label style={detailLabelStyle}>Админ ключ:</label>
                 <span style={{ color: '#C5C6C7' }}>{selectedEntry.admin_key || '-'}</span>
               </div>
               {selectedEntry.ip_address && (

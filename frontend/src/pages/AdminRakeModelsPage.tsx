@@ -210,7 +210,7 @@ const AdminRakeModelsPage: React.FC = () => {
               />
             </div>
             <div style={colStyle}>
-              <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Min Pot</label>
+              <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Мин. банк</label>
               <input
                 type="number"
                 step="0.01"
@@ -237,7 +237,7 @@ const AdminRakeModelsPage: React.FC = () => {
               <div style={cardHeaderStyle}>
                 <div>
                   <span style={{ color: '#66FCF1', fontWeight: 'bold', fontSize: '18px' }}>
-                    {model.room_id ? (room?.type || `Room ${model.room_id}`) : 'Global'}
+                    {model.room_id ? (room?.type || `Комната ${model.room_id}`) : 'Глобальная'}
                     {model.limit_type && ` - ${model.limit_type}`}
                   </span>
                 </div>
@@ -259,10 +259,10 @@ const AdminRakeModelsPage: React.FC = () => {
               <div style={{ color: '#C5C6C7', fontSize: '14px', marginTop: '10px' }}>
                 <div>Процент: {model.percent}%</div>
                 {model.cap && <div>Cap: ${model.cap.toFixed(2)}</div>}
-                <div>Min Pot: ${model.min_pot?.toFixed(2) || '0.00'}</div>
+                <div>Мин. банк: ${model.min_pot?.toFixed(2) || '0.00'}</div>
                 {model.params && (
                   <div style={{ fontSize: '12px', marginTop: '8px', opacity: 0.7 }}>
-                    Params: {JSON.stringify(model.params)}
+                    Параметры: {JSON.stringify(model.params)}
                   </div>
                 )}
               </div>

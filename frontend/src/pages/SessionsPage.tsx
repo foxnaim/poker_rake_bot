@@ -75,17 +75,17 @@ const SessionsPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div style={loadingStyle}>Loading sessions...</div>;
+    return <div style={loadingStyle}>Загрузка сессий...</div>;
   }
 
   return (
     <div style={pageStyle}>
       <div style={headerStyle}>
-        <h1 style={{ margin: 0 }}>Game Sessions</h1>
+        <h1 style={{ margin: 0 }}>Игровые сессии</h1>
         <div style={actionsStyle}>
           {activeSession ? (
             <button onClick={endSession} style={endButtonStyle}>
-              End Session
+              Завершить сессию
             </button>
           ) : (
             <div style={startGroupStyle}>
@@ -95,7 +95,7 @@ const SessionsPage: React.FC = () => {
                   onClick={() => startSession(limit)}
                   style={startButtonStyle}
                 >
-                  Start {limit}
+                  Запустить {limit}
                 </button>
               ))}
             </div>
@@ -106,26 +106,26 @@ const SessionsPage: React.FC = () => {
       {activeSession && (
         <div style={activeCardStyle}>
           <div style={activeHeaderStyle}>
-            <span style={activeBadgeStyle}>LIVE</span>
-            <h2 style={{ margin: 0 }}>Active Session: {activeSession.limit_type}</h2>
+            <span style={activeBadgeStyle}>ОНЛАЙН</span>
+            <h2 style={{ margin: 0 }}>Активная сессия: {activeSession.limit_type}</h2>
           </div>
           <div style={activeStatsStyle}>
             <div style={activeStatStyle}>
-              <span style={labelStyle}>Duration</span>
+              <span style={labelStyle}>Длительность</span>
               <span style={valueStyle}>{formatDuration(activeSession.period_start, null)}</span>
             </div>
             <div style={activeStatStyle}>
-              <span style={labelStyle}>Hands</span>
+              <span style={labelStyle}>Раздачи</span>
               <span style={valueStyle}>{activeSession.hands_played}</span>
             </div>
             <div style={activeStatStyle}>
-              <span style={labelStyle}>Winrate</span>
+              <span style={labelStyle}>Винрейт</span>
               <span style={valueStyle}>
                 {activeSession.winrate_bb_100.toFixed(2)} bb/100
               </span>
             </div>
             <div style={activeStatStyle}>
-              <span style={labelStyle}>Rake</span>
+              <span style={labelStyle}>Рейк</span>
               <span style={valueStyle}>${activeSession.total_rake.toFixed(2)}</span>
             </div>
           </div>
@@ -133,17 +133,17 @@ const SessionsPage: React.FC = () => {
       )}
 
       <div style={tableContainerStyle}>
-        <h3 style={{ margin: '0 0 20px 0', color: '#66FCF1' }}>Session History</h3>
+        <h3 style={{ margin: '0 0 20px 0', color: '#66FCF1' }}>История сессий</h3>
         <table style={tableStyle}>
           <thead>
             <tr style={tableHeaderStyle}>
-              <th style={thStyle}>Date</th>
-              <th style={thStyle}>Limit</th>
-              <th style={thStyle}>Duration</th>
-              <th style={thStyle}>Hands</th>
-              <th style={thStyle}>Winrate</th>
-              <th style={thStyle}>Rake</th>
-              <th style={thStyle}>Status</th>
+              <th style={thStyle}>Дата</th>
+              <th style={thStyle}>Лимит</th>
+              <th style={thStyle}>Длительность</th>
+              <th style={thStyle}>Раздачи</th>
+              <th style={thStyle}>Винрейт</th>
+              <th style={thStyle}>Рейк</th>
+              <th style={thStyle}>Статус</th>
             </tr>
           </thead>
           <tbody>
@@ -159,9 +159,9 @@ const SessionsPage: React.FC = () => {
                 <td style={tdStyle}>${session.total_rake.toFixed(2)}</td>
                 <td style={tdStyle}>
                   {session.is_active ? (
-                    <span style={liveBadgeStyle}>LIVE</span>
+                    <span style={liveBadgeStyle}>ОНЛАЙН</span>
                   ) : (
-                    <span style={completedBadgeStyle}>Completed</span>
+                    <span style={completedBadgeStyle}>Завершена</span>
                   )}
                 </td>
               </tr>

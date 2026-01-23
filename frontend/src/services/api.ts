@@ -2,7 +2,19 @@
  * API клиент для взаимодействия с backend
  */
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+// Используем относительный путь для прокси или переменную окружения
+// В браузере относительный путь будет работать через прокси из package.json
+// Принудительно используем относительные пути, если переменная содержит 'api:' (Docker hostname)
+// или если мы в браузере (window определен)
+const envUrl = process.env.REACT_APP_API_URL || '';
+const isBrowser = typeof window !== 'undefined';
+const API_BASE_URL = (envUrl.includes('api:') || (isBrowser && !envUrl)) ? '' : envUrl;
+
+// Логирование для отладки (только в development)
+if (process.env.NODE_ENV === 'development') {
+  console.log('API_BASE_URL:', API_BASE_URL || '(relative - using proxy)');
+  console.log('REACT_APP_API_URL:', envUrl || '(not set)');
+}
 
 export interface GameStateRequest {
   hand_id: string;

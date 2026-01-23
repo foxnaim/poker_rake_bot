@@ -19,11 +19,11 @@ const DecisionFeed: React.FC<DecisionFeedProps> = ({ messages }) => {
 
   return (
     <div className="decision-feed" style={cardStyle}>
-      <h2 style={titleStyle}>Recent Decisions</h2>
+      <h2 style={titleStyle}>Последние решения</h2>
       
       <div style={feedStyle}>
         {decisionMessages.length === 0 ? (
-          <div style={emptyStyle}>No decisions yet</div>
+          <div style={emptyStyle}>Решений пока нет</div>
         ) : (
           decisionMessages.map((msg, idx) => (
             <DecisionItem key={idx} message={msg} />
@@ -40,16 +40,16 @@ interface DecisionItemProps {
 
 const DecisionItem: React.FC<DecisionItemProps> = ({ message }) => {
   const { data } = message;
-  const time = new Date(message.timestamp).toLocaleTimeString();
+  const time = new Date(message.timestamp).toLocaleTimeString('ru-RU');
 
   return (
     <div style={itemStyle}>
       <div style={itemHeaderStyle}>
         <span style={timeStyle}>{time}</span>
-        <span style={actionStyle}>{data?.action || 'unknown'}</span>
+        <span style={actionStyle}>{data?.action || 'неизвестно'}</span>
       </div>
       {data?.amount && (
-        <div style={amountStyle}>Amount: {data.amount}</div>
+        <div style={amountStyle}>Сумма: {data.amount}</div>
       )}
       <div style={metaStyle}>
         {data?.limit_type} • {data?.street} • {data?.latency_ms}ms

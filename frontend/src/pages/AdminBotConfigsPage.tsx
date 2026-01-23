@@ -212,7 +212,7 @@ const AdminBotConfigsPage: React.FC = () => {
               />
             </div>
             <div style={colStyle}>
-              <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Target PFR</label>
+              <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Целевой PFR</label>
               <input
                 type="number"
                 step="0.1"
@@ -233,10 +233,17 @@ const AdminBotConfigsPage: React.FC = () => {
             </div>
           </div>
           <div style={sectionStyle}>
-            <label style={{ color: '#66FCF1', marginBottom: '10px', display: 'block' }}>Exploit Weights:</label>
-            {Object.entries(formData.exploit_weights).map(([street, weight]) => (
+            <label style={{ color: '#66FCF1', marginBottom: '10px', display: 'block' }}>Веса эксплойта:</label>
+            {Object.entries(formData.exploit_weights).map(([street, weight]) => {
+              const streetNames: {[key: string]: string} = {
+                preflop: 'Префлоп',
+                flop: 'Флоп',
+                turn: 'Тёрн',
+                river: 'Ривер'
+              };
+              return (
               <div key={street} style={rowStyle}>
-                <label style={{ color: '#C5C6C7', width: '100px' }}>{street}:</label>
+                <label style={{ color: '#C5C6C7', width: '100px' }}>{streetNames[street] || street}:</label>
                 <input
                   type="number"
                   step="0.1"
@@ -253,11 +260,12 @@ const AdminBotConfigsPage: React.FC = () => {
                   style={{...inputStyle, width: '100px'}}
                 />
               </div>
-            ))}
+            );
+            })}
           </div>
           <input
             type="number"
-            placeholder="Max Winrate Cap (bb/100, опционально)"
+            placeholder="Макс. винрейт (bb/100, опционально)"
             value={formData.max_winrate_cap || ''}
             onChange={(e) => setFormData({ 
               ...formData, 
@@ -302,7 +310,7 @@ const AdminBotConfigsPage: React.FC = () => {
                         fontSize: '10px',
                         marginLeft: '8px'
                       }}>
-                        DEFAULT
+                        ПО УМОЛЧАНИЮ
                       </span>
                     )}
                   </span>
@@ -328,11 +336,11 @@ const AdminBotConfigsPage: React.FC = () => {
               <div style={{ color: '#C5C6C7', fontSize: '14px', marginTop: '10px' }}>
                 <div>VPIP: {config.target_vpip}% | PFR: {config.target_pfr}% | AF: {config.target_af}</div>
                 <div style={{ fontSize: '12px', marginTop: '8px' }}>
-                  Exploit weights: {JSON.stringify(config.exploit_weights)}
+                  Веса эксплойта: {JSON.stringify(config.exploit_weights)}
                 </div>
                 {config.max_winrate_cap && (
                   <div style={{ fontSize: '12px', marginTop: '4px' }}>
-                    Max winrate cap: {config.max_winrate_cap} bb/100
+                    Макс. винрейт: {config.max_winrate_cap} bb/100
                   </div>
                 )}
               </div>

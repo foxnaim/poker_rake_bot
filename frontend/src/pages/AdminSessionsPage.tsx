@@ -129,7 +129,7 @@ const AdminSessionsPage: React.FC = () => {
             <option value={0}>Выберите стол</option>
             {tables.map(table => (
               <option key={table.id} value={table.id}>
-                Room {table.room_id} - {table.limit_type}
+                Комната {table.room_id} - {table.limit_type}
               </option>
             ))}
           </select>

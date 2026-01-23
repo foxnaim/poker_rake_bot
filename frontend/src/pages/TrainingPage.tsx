@@ -98,47 +98,47 @@ const TrainingPage: React.FC = () => {
   };
 
   const formatNumber = (num: number) => {
-    return num.toLocaleString('en-US');
+    return num.toLocaleString('ru-RU');
   };
 
   if (loading) {
-    return <div style={loadingStyle}>Loading training data...</div>;
+    return <div style={loadingStyle}>Загрузка данных обучения...</div>;
   }
 
   return (
     <div style={pageStyle}>
       <div style={headerStyle}>
-        <h1 style={{ margin: 0 }}>MCCFR Training</h1>
+        <h1 style={{ margin: 0 }}>Обучение MCCFR</h1>
       </div>
 
       {/* Training Controls */}
       <div style={controlsCardStyle}>
-        <h3 style={{ margin: '0 0 20px 0', color: '#66FCF1' }}>Training Controls</h3>
+        <h3 style={{ margin: '0 0 20px 0', color: '#66FCF1' }}>Управление обучением</h3>
 
         {status?.is_running ? (
           <div>
             <div style={progressContainerStyle}>
               <div style={progressHeaderStyle}>
-                <span>Training {status.format}</span>
+                <span>Обучение {status.format}</span>
                 <span>{status.total_iterations ? ((status.current_iteration || 0) / status.total_iterations * 100).toFixed(1) : 0}%</span>
               </div>
               <div style={progressBarBgStyle}>
                 <div style={{...progressBarStyle, width: `${status.total_iterations ? ((status.current_iteration || 0) / status.total_iterations * 100) : 0}%`}}></div>
               </div>
               <div style={progressStatsStyle}>
-                <span>Iteration: {formatNumber(status.current_iteration || 0)} / {formatNumber(status.total_iterations || 0)}</span>
-                <span>Started: {status.start_time ? new Date(status.start_time).toLocaleTimeString() : '-'}</span>
-                <span>ETA: {status.estimated_completion ? new Date(status.estimated_completion).toLocaleTimeString() : '-'}</span>
+                <span>Итерация: {formatNumber(status.current_iteration || 0)} / {formatNumber(status.total_iterations || 0)}</span>
+                <span>Начато: {status.start_time ? new Date(status.start_time).toLocaleTimeString('ru-RU') : '-'}</span>
+                <span>Осталось: {status.estimated_completion ? new Date(status.estimated_completion).toLocaleTimeString('ru-RU') : '-'}</span>
               </div>
             </div>
             <button onClick={stopTraining} style={stopButtonStyle}>
-              Stop Training
+              Остановить обучение
             </button>
           </div>
         ) : (
           <div style={startFormStyle}>
             <div style={formGroupStyle}>
-              <label style={labelStyle}>Format:</label>
+              <label style={labelStyle}>Формат:</label>
               <select
                 value={selectedFormat}
                 onChange={(e) => setSelectedFormat(e.target.value)}
@@ -150,7 +150,7 @@ const TrainingPage: React.FC = () => {
               </select>
             </div>
             <div style={formGroupStyle}>
-              <label style={labelStyle}>Iterations:</label>
+              <label style={labelStyle}>Итерации:</label>
               <input
                 type="number"
                 value={iterations}
@@ -162,7 +162,7 @@ const TrainingPage: React.FC = () => {
               />
             </div>
             <button onClick={startTraining} style={startButtonStyle}>
-              Start Training
+              Запустить обучение
             </button>
           </div>
         )}
@@ -170,7 +170,7 @@ const TrainingPage: React.FC = () => {
 
       {/* Checkpoints */}
       <div style={checkpointsCardStyle}>
-        <h3 style={{ margin: '0 0 20px 0', color: '#66FCF1' }}>Checkpoints</h3>
+        <h3 style={{ margin: '0 0 20px 0', color: '#66FCF1' }}>Чекпоинты</h3>
         <div style={checkpointsGridStyle}>
           {checkpoints.map((cp) => (
             <div key={cp.checkpoint_id} style={{
@@ -179,16 +179,16 @@ const TrainingPage: React.FC = () => {
             }}>
               <div style={checkpointHeaderStyle}>
                 <span style={formatBadgeStyle}>{cp.format}</span>
-                {cp.is_active && <span style={activeBadgeStyle}>ACTIVE</span>}
+                {cp.is_active && <span style={activeBadgeStyle}>АКТИВЕН</span>}
               </div>
               <div style={checkpointBodyStyle}>
                 <div style={checkpointStatStyle}>
-                  <span style={statLabelStyle}>Iterations</span>
+                  <span style={statLabelStyle}>Итерации</span>
                   <span style={statValueStyle}>{formatNumber(cp.training_iterations)}</span>
                 </div>
                 <div style={checkpointStatStyle}>
-                  <span style={statLabelStyle}>Created</span>
-                  <span style={statValueStyle}>{new Date(cp.created_at).toLocaleDateString()}</span>
+                  <span style={statLabelStyle}>Создан</span>
+                  <span style={statValueStyle}>{new Date(cp.created_at).toLocaleDateString('ru-RU')}</span>
                 </div>
               </div>
               {!cp.is_active && (
@@ -196,13 +196,13 @@ const TrainingPage: React.FC = () => {
                   onClick={() => activateCheckpoint(cp.checkpoint_id)}
                   style={activateButtonStyle}
                 >
-                  Activate
+                  Активировать
                 </button>
               )}
             </div>
           ))}
           {checkpoints.length === 0 && (
-            <div style={emptyStateStyle}>No checkpoints yet. Start training to create one.</div>
+            <div style={emptyStateStyle}>Чекпоинты отсутствуют. Запустите обучение для создания.</div>
           )}
         </div>
       </div>

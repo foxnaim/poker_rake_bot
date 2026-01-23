@@ -17,12 +17,12 @@ interface MetricsChartProps {
 const MetricsChart: React.FC<MetricsChartProps> = ({ stats }) => {
   return (
     <div className="metrics-chart" style={cardStyle}>
-      <h2 style={titleStyle}>Performance Metrics</h2>
+      <h2 style={titleStyle}>Метрики производительности</h2>
       
       <div style={chartContainerStyle}>
-        <MetricBar label="Latency" value={stats.avg_latency_ms} max={200} unit="ms" />
-        <MetricBar label="Hands/Hour" value={stats.hands_per_hour} max={100} unit="" />
-        <MetricBar label="Requests/sec" value={stats.requests_per_sec} max={10} unit="" />
+        <MetricBar label="Задержка" value={stats.avg_latency_ms} max={200} unit="мс" />
+        <MetricBar label="Раздач/час" value={stats.hands_per_hour} max={100} unit="" />
+        <MetricBar label="Запросов/сек" value={stats.requests_per_sec} max={10} unit="" />
       </div>
     </div>
   );

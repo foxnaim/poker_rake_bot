@@ -71,13 +71,13 @@ const HandsPage: React.FC = () => {
   const totalProfit = hands.reduce((sum, h) => sum + (h.result || 0), 0);
 
   if (loading && hands.length === 0) {
-    return <div style={loadingStyle}>Loading hands...</div>;
+    return <div style={loadingStyle}>Загрузка раздач...</div>;
   }
 
   return (
     <div style={pageStyle}>
       <div style={headerStyle}>
-        <h1 style={{ margin: 0 }}>Hand History</h1>
+        <h1 style={{ margin: 0 }}>История раздач</h1>
         <div style={filterGroupStyle}>
           {['all', 'NL2', 'NL5', 'NL10', 'NL25', 'NL50'].map(f => (
             <button
@@ -88,7 +88,7 @@ const HandsPage: React.FC = () => {
                 ...(limitFilter === f ? activeFilterStyle : {})
               }}
             >
-              {f === 'all' ? 'ALL' : f}
+              {f === 'all' ? 'ВСЕ' : f}
             </button>
           ))}
         </div>
@@ -96,11 +96,11 @@ const HandsPage: React.FC = () => {
 
       <div style={summaryStyle}>
         <div style={summaryItemStyle}>
-          <span style={summaryLabelStyle}>Hands Shown</span>
+          <span style={summaryLabelStyle}>Показано раздач</span>
           <span style={summaryValueStyle}>{hands.length}</span>
         </div>
         <div style={summaryItemStyle}>
-          <span style={summaryLabelStyle}>Total Profit</span>
+          <span style={summaryLabelStyle}>Общая прибыль</span>
           <span style={{...summaryValueStyle, color: getResultColor(totalProfit)}}>
             ${totalProfit.toFixed(2)}
           </span>
@@ -111,12 +111,12 @@ const HandsPage: React.FC = () => {
         <table style={tableStyle}>
           <thead>
             <tr style={tableHeaderStyle}>
-              <th style={thStyle}>Time</th>
-              <th style={thStyle}>Limit</th>
-              <th style={thStyle}>Hand</th>
-              <th style={thStyle}>Board</th>
-              <th style={thStyle}>Pot</th>
-              <th style={thStyle}>Result</th>
+              <th style={thStyle}>Время</th>
+              <th style={thStyle}>Лимит</th>
+              <th style={thStyle}>Карты</th>
+              <th style={thStyle}>Борд</th>
+              <th style={thStyle}>Банк</th>
+              <th style={thStyle}>Результат</th>
             </tr>
           </thead>
           <tbody>
@@ -149,7 +149,7 @@ const HandsPage: React.FC = () => {
         </table>
 
         {hands.length === 0 && (
-          <div style={emptyStateStyle}>No hands found</div>
+          <div style={emptyStateStyle}>Раздачи не найдены</div>
         )}
       </div>
 
@@ -159,15 +159,15 @@ const HandsPage: React.FC = () => {
           disabled={page === 1}
           style={{...pageButtonStyle, opacity: page === 1 ? 0.5 : 1}}
         >
-          Previous
+          Назад
         </button>
-        <span style={{ color: '#C5C6C7' }}>Page {page}</span>
+        <span style={{ color: '#C5C6C7' }}>Страница {page}</span>
         <button
           onClick={() => setPage(p => p + 1)}
           disabled={hands.length < pageSize}
           style={{...pageButtonStyle, opacity: hands.length < pageSize ? 0.5 : 1}}
         >
-          Next
+          Вперед
         </button>
       </div>
     </div>

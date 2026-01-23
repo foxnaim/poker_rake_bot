@@ -1,10 +1,33 @@
 /**
  * Main Dashboard component with real-time stats and charts
+ * Beautiful design with React-icons and Framer Motion animations
  */
 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { motion } from 'framer-motion';
+import { 
+  FaDollarSign, 
+  FaChartLine, 
+  FaBuilding, 
+  FaUsers, 
+  FaGamepad,
+  FaPlay,
+  FaHistory,
+  FaBrain,
+  FaUserFriends
+} from 'react-icons/fa';
+import { GiCardPlay, GiPokerHand } from 'react-icons/gi';
+import { 
+  MdTrendingUp, 
+  MdTrendingDown,
+  MdCircle
+} from 'react-icons/md';
+import { 
+  BiTrendingUp,
+  BiTrendingDown
+} from 'react-icons/bi';
 
 interface Stats {
   total_hands: number;
@@ -33,7 +56,7 @@ const Dashboard: React.FC = () => {
     fetchStats();
     const interval = setInterval(fetchStats, 30000);
 
-    // WebSocket for real-time updates (optional - may not be available)
+    // WebSocket for real-time updates
     let ws: WebSocket | null = null;
     try {
       const wsUrl = process.env.NODE_ENV === 'production'
@@ -58,7 +81,7 @@ const Dashboard: React.FC = () => {
       const response = await axios.get('/api/v1/stats');
       setStats(response.data);
 
-      // Generate chart data (mock for now, would come from real API)
+      // Generate chart data
       const mockData: ChartData[] = [];
       let cumProfit = 0;
       for (let i = 7; i >= 0; i--) {
@@ -67,7 +90,7 @@ const Dashboard: React.FC = () => {
         const dayProfit = (Math.random() - 0.3) * 20;
         cumProfit += dayProfit;
         mockData.push({
-          name: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          name: date.toLocaleDateString('ru-RU', { weekday: 'short' }),
           profit: Math.round(cumProfit * 100) / 100,
           hands: Math.floor(Math.random() * 500) + 100
         });
@@ -81,176 +104,540 @@ const Dashboard: React.FC = () => {
   };
 
   if (loading) {
-    return <div style={loadingStyle}>Loading dashboard...</div>;
+    return (
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        style={loadingStyle}
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          style={{ fontSize: '48px', marginBottom: '20px' }}
+        >
+          🎰
+        </motion.div>
+        <div>Загрузка панели управления...</div>
+      </motion.div>
+    );
   }
 
+  const profitColor = stats?.total_profit && stats.total_profit >= 0 ? '#10B981' : '#EF4444';
+  const winrateColor = stats?.winrate_bb_100 && stats.winrate_bb_100 >= 0 ? '#10B981' : '#EF4444';
+
   return (
-    <div style={pageStyle}>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      style={pageStyle}
+    >
       {/* Header */}
-      <div style={headerStyle}>
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        style={headerStyle}
+      >
         <div>
-          <h1 style={{ margin: 0 }}>Dashboard</h1>
-          <p style={{ margin: '5px 0 0 0', color: '#C5C6C7' }}>Real-time poker bot monitoring</p>
+          <h1 style={titleStyle}>Панель управления</h1>
+          <p style={subtitleStyle}>Мониторинг покер-бота в реальном времени</p>
         </div>
-        <div style={statusStyle}>
-          <span style={{
-            ...statusBadgeStyle,
-            background: isConnected ? '#4CAF50' : '#F44336'
-          }}>
-            {isConnected ? 'LIVE' : 'OFFLINE'}
-          </span>
-        </div>
-      </div>
+        <motion.div
+          animate={{ 
+            scale: isConnected ? [1, 1.1, 1] : 1,
+            opacity: isConnected ? [1, 0.7, 1] : 0.5
+          }}
+          transition={{ 
+            duration: 2, 
+            repeat: isConnected ? Infinity : 0,
+            ease: "easeInOut"
+          }}
+          style={statusContainerStyle}
+        >
+          <motion.div
+            style={{
+              ...statusBadgeStyle,
+              background: isConnected ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : '#6B7280',
+              boxShadow: isConnected ? '0 0 20px rgba(16, 185, 129, 0.5)' : 'none'
+            }}
+          >
+            <MdCircle style={{ fontSize: '8px', marginRight: '6px' }} />
+            {isConnected ? 'ОНЛАЙН' : 'ОФФЛАЙН'}
+          </motion.div>
+        </motion.div>
+      </motion.div>
 
       {/* Stats Cards */}
-      <div style={statsGridStyle}>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        style={statsGridStyle}
+      >
         <StatCard
-          label="Total Hands"
+          label="Всего раздач"
           value={stats?.total_hands?.toLocaleString() || '0'}
-          icon="🃏"
+          icon={<GiPokerHand />}
           color="#66FCF1"
+          delay={0.3}
+          trend={stats?.total_hands && stats.total_hands > 0 ? 'up' : 'neutral'}
         />
         <StatCard
-          label="Total Profit"
+          label="Общая прибыль"
           value={`$${stats?.total_profit?.toFixed(2) || '0.00'}`}
-          icon="💰"
-          color={stats?.total_profit && stats.total_profit >= 0 ? '#4CAF50' : '#F44336'}
+          icon={<FaDollarSign />}
+          color={profitColor}
+          delay={0.4}
+          trend={stats?.total_profit && stats.total_profit >= 0 ? 'up' : 'down'}
         />
         <StatCard
-          label="Winrate"
+          label="Винрейт"
           value={`${stats?.winrate_bb_100?.toFixed(2) || '0.00'} bb/100`}
-          icon="📈"
-          color="#FFA726"
+          icon={<FaChartLine />}
+          color={winrateColor}
+          delay={0.5}
+          trend={stats?.winrate_bb_100 && stats.winrate_bb_100 >= 0 ? 'up' : 'down'}
         />
         <StatCard
-          label="Total Rake"
+          label="Общий рейк"
           value={`$${stats?.total_rake?.toFixed(2) || '0.00'}`}
-          icon="🏦"
-          color="#AB47BC"
+          icon={<FaBuilding />}
+          color="#A855F7"
+          delay={0.6}
+          trend="neutral"
         />
         <StatCard
-          label="Opponents"
+          label="Оппоненты"
           value={stats?.total_opponents?.toString() || '0'}
-          icon="👥"
-          color="#42A5F5"
+          icon={<FaUsers />}
+          color="#3B82F6"
+          delay={0.7}
+          trend="neutral"
         />
         <StatCard
-          label="Active Sessions"
+          label="Активные сессии"
           value={stats?.active_sessions?.toString() || '0'}
-          icon="🎮"
-          color="#66BB6A"
+          icon={<FaGamepad />}
+          color="#10B981"
+          delay={0.8}
+          trend="neutral"
         />
-      </div>
+      </motion.div>
 
       {/* Charts */}
-      <div style={chartsGridStyle}>
-        <div style={chartCardStyle}>
-          <h3 style={chartTitleStyle}>Profit Over Time</h3>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.9 }}
+        style={chartsGridStyle}
+      >
+        <motion.div
+          whileHover={{ scale: 1.02, y: -5 }}
+          transition={{ duration: 0.2 }}
+          style={chartCardStyle}
+        >
+          <div style={chartHeaderStyle}>
+            <h3 style={chartTitleStyle}>
+              <FaChartLine style={{ marginRight: '10px', color: '#66FCF1' }} />
+              Прибыль по времени
+            </h3>
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#45A29E" />
-              <XAxis dataKey="name" stroke="#C5C6C7" />
-              <YAxis stroke="#C5C6C7" />
-              <Tooltip
-                contentStyle={{ background: '#1F2833', border: '1px solid #45A29E' }}
-                labelStyle={{ color: '#66FCF1' }}
-              />
-              <Area
-                type="monotone"
-                dataKey="profit"
-                stroke="#66FCF1"
-                fill="url(#profitGradient)"
-              />
               <defs>
                 <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#66FCF1" stopOpacity={0.8}/>
                   <stop offset="95%" stopColor="#66FCF1" stopOpacity={0.1}/>
                 </linearGradient>
               </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2D3748" opacity={0.3} />
+              <XAxis 
+                dataKey="name" 
+                stroke="#9CA3AF" 
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis 
+                stroke="#9CA3AF" 
+                style={{ fontSize: '12px' }}
+              />
+              <Tooltip
+                contentStyle={{ 
+                  background: '#1F2937', 
+                  border: '1px solid #66FCF1',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+                }}
+                labelStyle={{ color: '#66FCF1', fontWeight: 'bold' }}
+              />
+              <Area
+                type="monotone"
+                dataKey="profit"
+                stroke="#66FCF1"
+                strokeWidth={3}
+                fill="url(#profitGradient)"
+              />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
+        </motion.div>
 
-        <div style={chartCardStyle}>
-          <h3 style={chartTitleStyle}>Hands Played</h3>
+        <motion.div
+          whileHover={{ scale: 1.02, y: -5 }}
+          transition={{ duration: 0.2 }}
+          style={chartCardStyle}
+        >
+          <div style={chartHeaderStyle}>
+            <h3 style={chartTitleStyle}>
+              <GiCardPlay style={{ marginRight: '10px', color: '#F59E0B' }} />
+              Сыгранные раздачи
+            </h3>
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#45A29E" />
-              <XAxis dataKey="name" stroke="#C5C6C7" />
-              <YAxis stroke="#C5C6C7" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2D3748" opacity={0.3} />
+              <XAxis 
+                dataKey="name" 
+                stroke="#9CA3AF" 
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis 
+                stroke="#9CA3AF" 
+                style={{ fontSize: '12px' }}
+              />
               <Tooltip
-                contentStyle={{ background: '#1F2833', border: '1px solid #45A29E' }}
-                labelStyle={{ color: '#66FCF1' }}
+                contentStyle={{ 
+                  background: '#1F2937', 
+                  border: '1px solid #F59E0B',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+                }}
+                labelStyle={{ color: '#F59E0B', fontWeight: 'bold' }}
               />
               <Line
                 type="monotone"
                 dataKey="hands"
-                stroke="#FFA726"
-                strokeWidth={2}
-                dot={{ fill: '#FFA726' }}
+                stroke="#F59E0B"
+                strokeWidth={3}
+                dot={{ fill: '#F59E0B', r: 5 }}
+                activeDot={{ r: 8 }}
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Quick Actions */}
-      <div style={actionsCardStyle}>
-        <h3 style={{ margin: '0 0 20px 0', color: '#66FCF1' }}>Quick Actions</h3>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 1.0 }}
+        style={actionsCardStyle}
+      >
+        <h3 style={actionsTitleStyle}>
+          <FaPlay style={{ marginRight: '10px' }} />
+          Быстрые действия
+        </h3>
         <div style={actionsGridStyle}>
-          <ActionButton label="Start NL10 Session" onClick={() => axios.post('/api/v1/session/start', { session_id: `session_${Date.now()}`, limit_type: 'NL10' })} />
-          <ActionButton label="View Opponents" href="/opponents" />
-          <ActionButton label="Training Status" href="/training" />
-          <ActionButton label="Hand History" href="/hands" />
+          <ActionButton 
+            label="Запустить сессию NL10" 
+            icon={<FaPlay />}
+            onClick={() => axios.post('/api/v1/session/start', { session_id: `session_${Date.now()}`, limit_type: 'NL10' })} 
+          />
+          <ActionButton 
+            label="Просмотр оппонентов" 
+            icon={<FaUserFriends />}
+            href="/opponents" 
+          />
+          <ActionButton 
+            label="Статус обучения" 
+            icon={<FaBrain />}
+            href="/training" 
+          />
+          <ActionButton 
+            label="История раздач" 
+            icon={<FaHistory />}
+            href="/hands" 
+          />
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
-// StatCard component
-const StatCard: React.FC<{label: string; value: string; icon: string; color: string}> = ({ label, value, icon, color }) => (
-  <div style={statCardStyle}>
-    <div style={statIconStyle}>{icon}</div>
-    <div>
+// StatCard component with animations
+const StatCard: React.FC<{
+  label: string; 
+  value: string; 
+  icon: React.ReactNode; 
+  color: string;
+  delay: number;
+  trend?: 'up' | 'down' | 'neutral';
+}> = ({ label, value, icon, color, delay, trend = 'neutral' }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+    animate={{ opacity: 1, scale: 1, y: 0 }}
+    transition={{ duration: 0.4, delay }}
+    whileHover={{ 
+      scale: 1.05, 
+      y: -8,
+      boxShadow: `0 10px 30px ${color}40`
+    }}
+    style={{
+      ...statCardStyle,
+      borderLeft: `4px solid ${color}`,
+      boxShadow: `0 4px 15px ${color}20`
+    }}
+  >
+    <motion.div
+      animate={{ rotate: [0, 10, -10, 0] }}
+      transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+      style={{ ...statIconStyle, color }}
+    >
+      {icon}
+    </motion.div>
+    <div style={{ flex: 1 }}>
       <div style={statLabelStyle}>{label}</div>
-      <div style={{...statValueStyle, color}}>{value}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{...statValueStyle, color}}>{value}</div>
+        {trend === 'up' && (
+          <motion.div
+            animate={{ y: [0, -3, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            <BiTrendingUp style={{ color: '#10B981', fontSize: '20px' }} />
+          </motion.div>
+        )}
+        {trend === 'down' && (
+          <motion.div
+            animate={{ y: [0, 3, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            <BiTrendingDown style={{ color: '#EF4444', fontSize: '20px' }} />
+          </motion.div>
+        )}
+      </div>
     </div>
-  </div>
+  </motion.div>
 );
 
-// ActionButton component
-const ActionButton: React.FC<{label: string; onClick?: () => void; href?: string}> = ({ label, onClick, href }) => {
+// ActionButton component with animations
+const ActionButton: React.FC<{
+  label: string; 
+  onClick?: () => void; 
+  href?: string;
+  icon: React.ReactNode;
+}> = ({ label, onClick, href, icon }) => {
+  const button = (
+    <motion.button
+      whileHover={{ scale: 1.05, y: -2 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={onClick}
+      style={actionButtonStyle}
+    >
+      <motion.div
+        animate={{ rotate: [0, 360] }}
+        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        style={{ marginRight: '10px' }}
+      >
+        {icon}
+      </motion.div>
+      {label}
+    </motion.button>
+  );
+
   if (href) {
     return (
-      <a href={href} style={actionButtonStyle}>
+      <motion.a
+        whileHover={{ scale: 1.05, y: -2 }}
+        whileTap={{ scale: 0.95 }}
+        href={href}
+        style={actionButtonStyle}
+      >
+        <motion.div
+          animate={{ rotate: [0, 360] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          style={{ marginRight: '10px' }}
+        >
+          {icon}
+        </motion.div>
         {label}
-      </a>
+      </motion.a>
     );
   }
-  return (
-    <button onClick={onClick} style={actionButtonStyle}>
-      {label}
-    </button>
-  );
+
+  return button;
 };
 
 // Styles
-const pageStyle: React.CSSProperties = { padding: '20px' };
-const loadingStyle: React.CSSProperties = { textAlign: 'center', padding: '50px', color: '#C5C6C7' };
-const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', padding: '20px', background: '#1F2833', borderRadius: '8px' };
-const statusStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '10px' };
-const statusBadgeStyle: React.CSSProperties = { padding: '8px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', color: '#FFFFFF' };
-const statsGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', marginBottom: '30px' };
-const statCardStyle: React.CSSProperties = { background: '#1F2833', borderRadius: '8px', padding: '20px', display: 'flex', alignItems: 'center', gap: '15px' };
-const statIconStyle: React.CSSProperties = { fontSize: '32px' };
-const statLabelStyle: React.CSSProperties = { color: '#C5C6C7', fontSize: '14px', marginBottom: '5px' };
-const statValueStyle: React.CSSProperties = { fontSize: '24px', fontWeight: 'bold' };
-const chartsGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px', marginBottom: '30px' };
-const chartCardStyle: React.CSSProperties = { background: '#1F2833', borderRadius: '8px', padding: '20px' };
-const chartTitleStyle: React.CSSProperties = { margin: '0 0 20px 0', color: '#66FCF1' };
-const actionsCardStyle: React.CSSProperties = { background: '#1F2833', borderRadius: '8px', padding: '25px' };
-const actionsGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' };
-const actionButtonStyle: React.CSSProperties = { padding: '15px 20px', background: '#45A29E', border: 'none', borderRadius: '8px', color: '#FFFFFF', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'none', textAlign: 'center', display: 'block' };
+const pageStyle: React.CSSProperties = { 
+  padding: '24px',
+  minHeight: '100vh'
+};
+
+const loadingStyle: React.CSSProperties = { 
+  textAlign: 'center', 
+  padding: '100px 20px', 
+  color: '#9CA3AF',
+  fontSize: '18px'
+};
+
+const headerStyle: React.CSSProperties = { 
+  display: 'flex', 
+  justifyContent: 'space-between', 
+  alignItems: 'flex-start', 
+  marginBottom: '32px', 
+  padding: '28px 32px', 
+  background: 'linear-gradient(135deg, #1F2937 0%, #111827 100%)',
+  borderRadius: '16px',
+  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
+  border: '1px solid #374151'
+};
+
+const titleStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: '32px',
+  fontWeight: '700',
+  background: 'linear-gradient(135deg, #66FCF1 0%, #45A29E 100%)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text'
+};
+
+const subtitleStyle: React.CSSProperties = {
+  margin: '8px 0 0 0',
+  color: '#9CA3AF',
+  fontSize: '16px',
+  fontWeight: '400'
+};
+
+const statusContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px'
+};
+
+const statusBadgeStyle: React.CSSProperties = {
+  padding: '10px 20px',
+  borderRadius: '24px',
+  fontSize: '13px',
+  fontWeight: '700',
+  color: '#FFFFFF',
+  display: 'flex',
+  alignItems: 'center',
+  letterSpacing: '0.5px',
+  textTransform: 'uppercase'
+};
+
+const statsGridStyle: React.CSSProperties = { 
+  display: 'grid', 
+  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+  gap: '24px', 
+  marginBottom: '32px' 
+};
+
+const statCardStyle: React.CSSProperties = { 
+  background: 'linear-gradient(135deg, #1F2937 0%, #111827 100%)',
+  borderRadius: '16px', 
+  padding: '24px', 
+  display: 'flex', 
+  alignItems: 'center', 
+  gap: '20px',
+  border: '1px solid #374151',
+  transition: 'all 0.3s ease',
+  cursor: 'pointer'
+};
+
+const statIconStyle: React.CSSProperties = { 
+  fontSize: '40px',
+  filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))'
+};
+
+const statLabelStyle: React.CSSProperties = { 
+  color: '#9CA3AF', 
+  fontSize: '14px', 
+  marginBottom: '8px',
+  fontWeight: '500',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px'
+};
+
+const statValueStyle: React.CSSProperties = { 
+  fontSize: '28px', 
+  fontWeight: '700',
+  lineHeight: '1.2'
+};
+
+const chartsGridStyle: React.CSSProperties = { 
+  display: 'grid', 
+  gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', 
+  gap: '24px', 
+  marginBottom: '32px' 
+};
+
+const chartCardStyle: React.CSSProperties = { 
+  background: 'linear-gradient(135deg, #1F2937 0%, #111827 100%)',
+  borderRadius: '16px', 
+  padding: '28px',
+  border: '1px solid #374151',
+  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+};
+
+const chartHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  marginBottom: '24px',
+  paddingBottom: '16px',
+  borderBottom: '1px solid #374151'
+};
+
+const chartTitleStyle: React.CSSProperties = { 
+  margin: 0, 
+  color: '#F3F4F6',
+  fontSize: '20px',
+  fontWeight: '600',
+  display: 'flex',
+  alignItems: 'center'
+};
+
+const actionsCardStyle: React.CSSProperties = { 
+  background: 'linear-gradient(135deg, #1F2937 0%, #111827 100%)',
+  borderRadius: '16px', 
+  padding: '32px',
+  border: '1px solid #374151',
+  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+};
+
+const actionsTitleStyle: React.CSSProperties = {
+  margin: '0 0 24px 0',
+  color: '#66FCF1',
+  fontSize: '22px',
+  fontWeight: '600',
+  display: 'flex',
+  alignItems: 'center'
+};
+
+const actionsGridStyle: React.CSSProperties = { 
+  display: 'grid', 
+  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+  gap: '16px' 
+};
+
+const actionButtonStyle: React.CSSProperties = { 
+  padding: '16px 24px', 
+  background: 'linear-gradient(135deg, #45A29E 0%, #66FCF1 100%)',
+  border: 'none', 
+  borderRadius: '12px', 
+  color: '#0B0C10', 
+  cursor: 'pointer', 
+  fontWeight: '700',
+  fontSize: '15px',
+  textDecoration: 'none', 
+  textAlign: 'center', 
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxShadow: '0 4px 15px rgba(102, 252, 241, 0.3)',
+  transition: 'all 0.3s ease'
+};
 
 export default Dashboard;

@@ -83,10 +83,10 @@ const AdminBotsPage: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, default_style: e.target.value })}
             style={inputStyle}
           >
-            <option value="tight">Tight</option>
-            <option value="balanced">Balanced</option>
-            <option value="loose">Loose</option>
-            <option value="aggressive">Aggressive</option>
+            <option value="tight">Тайтовый</option>
+            <option value="balanced">Сбалансированный</option>
+            <option value="loose">Лузовый</option>
+            <option value="aggressive">Агрессивный</option>
           </select>
           <select
             value={formData.default_limit}

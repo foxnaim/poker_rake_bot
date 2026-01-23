@@ -36,7 +36,7 @@ const AdminAgentsPage: React.FC = () => {
       setAgents(response.data);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to fetch agents');
+      setError(err.response?.data?.detail || 'Ошибка загрузки агентов');
     } finally {
       setLoading(false);
     }
@@ -52,9 +52,9 @@ const AdminAgentsPage: React.FC = () => {
       });
       setCommandAgent(null);
       setCommandReason('');
-      alert(`Command ${commandType} sent to ${agentId}`);
+      alert(`Команда ${commandType} отправлена агенту ${agentId}`);
     } catch (err: any) {
-      alert(`Error: ${err.response?.data?.detail || 'Failed to send command'}`);
+      alert(`Ошибка: ${err.response?.data?.detail || 'Не удалось отправить команду'}`);
     }
   };
 
@@ -68,21 +68,21 @@ const AdminAgentsPage: React.FC = () => {
   };
 
   const formatLastSeen = (lastSeen: string) => {
-    if (!lastSeen) return 'Never';
+    if (!lastSeen) return 'Никогда';
     const date = new Date(lastSeen);
-    return date.toLocaleString();
+    return date.toLocaleString('ru-RU');
   };
 
   if (loading) {
-    return <div style={loadingStyle}>Loading agents...</div>;
+    return <div style={loadingStyle}>Загрузка агентов...</div>;
   }
 
   return (
     <div style={pageStyle}>
       <div style={headerStyle}>
-        <h1 style={{ margin: 0 }}>Agent Management</h1>
+        <h1 style={{ margin: 0 }}>Управление агентами</h1>
         <p style={{ margin: '5px 0 0 0', color: '#C5C6C7' }}>
-          Monitor and control bot agents in real-time
+          Мониторинг и управление агентами ботов в реальном времени
         </p>
       </div>
 
@@ -92,32 +92,32 @@ const AdminAgentsPage: React.FC = () => {
       <div style={statsRowStyle}>
         <div style={statBoxStyle}>
           <div style={statValueStyle}>{agents.length}</div>
-          <div style={statLabelStyle}>Total Agents</div>
+          <div style={statLabelStyle}>Всего агентов</div>
         </div>
         <div style={statBoxStyle}>
           <div style={{ ...statValueStyle, color: '#4CAF50' }}>
             {agents.filter(a => a.status === 'online').length}
           </div>
-          <div style={statLabelStyle}>Online</div>
+          <div style={statLabelStyle}>Онлайн</div>
         </div>
         <div style={statBoxStyle}>
           <div style={{ ...statValueStyle, color: '#F44336' }}>
             {agents.filter(a => a.status === 'offline').length}
           </div>
-          <div style={statLabelStyle}>Offline</div>
+          <div style={statLabelStyle}>Оффлайн</div>
         </div>
         <div style={statBoxStyle}>
           <div style={{ ...statValueStyle, color: '#FFA726' }}>
             {agents.filter(a => a.assigned_session_id).length}
           </div>
-          <div style={statLabelStyle}>In Session</div>
+          <div style={statLabelStyle}>В сессии</div>
         </div>
       </div>
 
       {/* Agents Grid */}
       <div style={agentsGridStyle}>
         {agents.length === 0 ? (
-          <div style={emptyStyle}>No agents registered yet</div>
+          <div style={emptyStyle}>Агенты еще не зарегистрированы</div>
         ) : (
           agents.map(agent => (
             <div key={agent.agent_id} style={agentCardStyle}>
@@ -137,19 +137,19 @@ const AdminAgentsPage: React.FC = () => {
 
               <div style={agentInfoStyle}>
                 <div style={infoRowStyle}>
-                  <span style={infoLabelStyle}>Last Seen:</span>
+                  <span style={infoLabelStyle}>Последний раз:</span>
                   <span>{formatLastSeen(agent.last_seen)}</span>
                 </div>
                 <div style={infoRowStyle}>
-                  <span style={infoLabelStyle}>Version:</span>
-                  <span>{agent.version || 'Unknown'}</span>
+                  <span style={infoLabelStyle}>Версия:</span>
+                  <span>{agent.version || 'Неизвестно'}</span>
                 </div>
                 <div style={infoRowStyle}>
-                  <span style={infoLabelStyle}>Session:</span>
-                  <span>{agent.assigned_session_id || 'None'}</span>
+                  <span style={infoLabelStyle}>Сессия:</span>
+                  <span>{agent.assigned_session_id || 'Нет'}</span>
                 </div>
                 <div style={infoRowStyle}>
-                  <span style={infoLabelStyle}>Heartbeat Lag:</span>
+                  <span style={infoLabelStyle}>Задержка heartbeat:</span>
                   <span style={{
                     color: (agent.heartbeat_lag_seconds || 0) > 30 ? '#F44336' : '#4CAF50'
                   }}>
@@ -166,14 +166,14 @@ const AdminAgentsPage: React.FC = () => {
                       onChange={e => setCommandType(e.target.value)}
                       style={selectStyle}
                     >
-                      <option value="pause">Pause</option>
-                      <option value="resume">Resume</option>
-                      <option value="stop">Stop</option>
-                      <option value="sit_out">Sit Out</option>
+                      <option value="pause">Пауза</option>
+                      <option value="resume">Продолжить</option>
+                      <option value="stop">Остановить</option>
+                      <option value="sit_out">Выйти из игры</option>
                     </select>
                     <input
                       type="text"
-                      placeholder="Reason (optional)"
+                      placeholder="Причина (опционально)"
                       value={commandReason}
                       onChange={e => setCommandReason(e.target.value)}
                       style={inputStyle}
@@ -183,13 +183,13 @@ const AdminAgentsPage: React.FC = () => {
                         onClick={() => sendCommand(agent.agent_id)}
                         style={sendButtonStyle}
                       >
-                        Send
+                        Отправить
                       </button>
                       <button
                         onClick={() => setCommandAgent(null)}
                         style={cancelButtonStyle}
                       >
-                        Cancel
+                        Отмена
                       </button>
                     </div>
                   </div>
@@ -199,7 +199,7 @@ const AdminAgentsPage: React.FC = () => {
                     style={commandButtonStyle}
                     disabled={agent.status === 'offline'}
                   >
-                    Send Command
+                    Отправить команду
                   </button>
                 )}
               </div>

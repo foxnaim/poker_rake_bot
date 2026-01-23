@@ -17,14 +17,14 @@ interface LiveStatsProps {
 const LiveStats: React.FC<LiveStatsProps> = ({ stats }) => {
   return (
     <div className="live-stats" style={cardStyle}>
-      <h2 style={titleStyle}>Live Statistics</h2>
+      <h2 style={titleStyle}>Статистика в реальном времени</h2>
       
       <div style={statsContainerStyle}>
-        <StatItem label="Winrate NL10" value={`${stats.winrate_nl10.toFixed(2)} bb/100`} />
-        <StatItem label="Winrate NL50" value={`${stats.winrate_nl50.toFixed(2)} bb/100`} />
-        <StatItem label="Hands/Hour" value={stats.hands_per_hour.toFixed(0)} />
-        <StatItem label="Avg Latency" value={`${stats.avg_latency_ms.toFixed(0)} ms`} />
-        <StatItem label="Requests/sec" value={stats.requests_per_sec.toFixed(1)} />
+        <StatItem label="Винрейт NL10" value={`${stats.winrate_nl10.toFixed(2)} bb/100`} />
+        <StatItem label="Винрейт NL50" value={`${stats.winrate_nl50.toFixed(2)} bb/100`} />
+        <StatItem label="Раздач/час" value={stats.hands_per_hour.toFixed(0)} />
+        <StatItem label="Средняя задержка" value={`${stats.avg_latency_ms.toFixed(0)} мс`} />
+        <StatItem label="Запросов/сек" value={stats.requests_per_sec.toFixed(1)} />
       </div>
     </div>
   );
