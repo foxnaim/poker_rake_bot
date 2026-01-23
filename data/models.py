@@ -346,3 +346,48 @@ class AuditLog(Base):
     # 'metadata' зарезервировано в SQLAlchemy Declarative API
     meta_data = Column("metadata", JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+# ============================================
+# Модели из v1.2 (объединены)
+# ============================================
+
+class Session(Base):
+    """Модель сессии запросов (API sessions)"""
+    __tablename__ = "sessions"
+
+    session_id = Column(String(100), primary_key=True)
+    client_id = Column(String(100), index=True)
+    table_id = Column(String(100), index=True)
+    limit_type = Column(String(20))
+    started_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_activity = Column(DateTime(timezone=True), server_default=func.now())
+    context = Column(JSON)
+    is_active = Column(Boolean, default=True, index=True)
+
+
+class PerformanceLog(Base):
+    """Модель лога производительности"""
+    __tablename__ = "performance_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    endpoint = Column(String(100), nullable=False, index=True)
+    method = Column(String(10), nullable=False)
+    latency_ms = Column(Integer, nullable=False)
+    status_code = Column(Integer)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    meta_data = Column("metadata", JSON)
+
+
+class Alert(Base):
+    """Модель алерта"""
+    __tablename__ = "alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    alert_type = Column(String(50), nullable=False, index=True)
+    severity = Column(String(20), nullable=False)  # info, warning, error, critical
+    message = Column(Text, nullable=False)
+    meta_data = Column("metadata", JSON)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    is_resolved = Column(Boolean, default=False, index=True)

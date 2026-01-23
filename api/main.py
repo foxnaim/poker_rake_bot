@@ -333,10 +333,29 @@ async def api_info():
 
 @app.get("/api/v1/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint with Safe Mode status"""
+    from api.safe_mode import safe_mode
+
+    # Проверяем состояние circuit breakers
+    db_ok = safe_mode.is_db_available()
+    redis_ok = safe_mode.is_redis_available()
+
+    # Определяем общий статус
+    if db_ok and redis_ok:
+        status = "healthy"
+    elif db_ok:
+        status = "degraded"  # Redis недоступен, но работаем
+    else:
+        status = "unhealthy"  # БД недоступна
+
     return {
-        "status": "healthy",
-        "timestamp": time.time()
+        "status": status,
+        "timestamp": time.time(),
+        "safe_mode": safe_mode.get_status(),
+        "services": {
+            "database": "up" if db_ok else "down",
+            "redis": "up" if redis_ok else "down"
+        }
     }
 
 
