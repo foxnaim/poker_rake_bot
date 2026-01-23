@@ -1,5 +1,5 @@
 /**
- * Admin page for managing bot agents (physical bot instances)
+ * Админ страница для управления агентами ботов (физические экземпляры ботов)
  */
 
 import React, { useEffect, useState } from 'react';
@@ -52,7 +52,13 @@ const AdminAgentsPage: React.FC = () => {
       });
       setCommandAgent(null);
       setCommandReason('');
-      alert(`Команда ${commandType} отправлена агенту ${agentId}`);
+      const commandNames: {[key: string]: string} = {
+        pause: 'Пауза',
+        resume: 'Продолжить',
+        stop: 'Остановить',
+        sit_out: 'Выйти из игры'
+      };
+      alert(`Команда "${commandNames[commandType] || commandType}" отправлена агенту ${agentId}`);
     } catch (err: any) {
       alert(`Ошибка: ${err.response?.data?.detail || 'Не удалось отправить команду'}`);
     }

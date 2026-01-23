@@ -1,5 +1,5 @@
 /**
- * Admin страница для просмотра Audit Log
+ * Админ страница для просмотра журнала аудита
  */
 
 import React, { useState, useEffect } from 'react';

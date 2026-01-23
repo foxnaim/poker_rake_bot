@@ -65,7 +65,7 @@ const Navbar: React.FC = () => {
         >
           <GiPokerHand style={{ fontSize: '32px', color: '#66FCF1' }} />
         </motion.div>
-        <h2 style={brandTitleStyle}>Poker Rake Bot</h2>
+        <h2 style={brandTitleStyle}>Покер Рейк Бот</h2>
       </motion.div>
       
       <div style={linksStyle}>

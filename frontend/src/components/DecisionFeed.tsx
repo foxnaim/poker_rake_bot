@@ -52,7 +52,7 @@ const DecisionItem: React.FC<DecisionItemProps> = ({ message }) => {
         <div style={amountStyle}>Сумма: {data.amount}</div>
       )}
       <div style={metaStyle}>
-        {data?.limit_type} • {data?.street} • {data?.latency_ms}ms
+        {data?.limit_type} • {data?.street === 'preflop' ? 'Префлоп' : data?.street === 'flop' ? 'Флоп' : data?.street === 'turn' ? 'Тёрн' : data?.street === 'river' ? 'Ривер' : data?.street} • {data?.latency_ms}мс
       </div>
     </div>
   );
