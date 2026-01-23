@@ -68,7 +68,7 @@ const AdminTablesPage: React.FC = () => {
   };
 
   const handleDelete = async (tableId: number) => {
-    if (!confirm('Удалить этот стол?')) return;
+    if (!window.confirm('Удалить этот стол?')) return;
     
     try {
       await apiClient.deleteTable(tableId);

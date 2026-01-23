@@ -18,7 +18,7 @@ scrape_configs:
   # Poker Bot API
   - job_name: 'poker_bot_api'
     static_configs:
-      - targets: ['poker_bot_api:8000']
+      - targets: ['api:8000']
         labels:
           service: 'poker_bot'
           environment: 'development'

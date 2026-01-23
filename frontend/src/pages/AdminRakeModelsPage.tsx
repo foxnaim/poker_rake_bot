@@ -98,7 +98,7 @@ const AdminRakeModelsPage: React.FC = () => {
   };
 
   const handleDelete = async (modelId: number) => {
-    if (!confirm('Удалить эту модель рейка?')) return;
+    if (!window.confirm('Удалить эту модель рейка?')) return;
     
     try {
       await apiClient.deleteRakeModel(modelId);

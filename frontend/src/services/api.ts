@@ -254,6 +254,30 @@ export class APIClient {
   async getEntityAudit(entityType: string, entityId: number): Promise<any[]> {
     return this.request(`/api/v1/admin/audit/entity/${entityType}/${entityId}`);
   }
+
+  // API Keys management
+  async getApiKeys(): Promise<any[]> {
+    return this.request('/api/v1/admin/api-keys');
+  }
+
+  async createApiKey(keyData: any): Promise<any> {
+    return this.request('/api/v1/admin/api-keys', {
+      method: 'POST',
+      body: JSON.stringify(keyData),
+    });
+  }
+
+  async deleteApiKey(keyId: number): Promise<void> {
+    return this.request(`/api/v1/admin/api-keys/${keyId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async toggleApiKey(keyId: number): Promise<void> {
+    return this.request(`/api/v1/admin/api-keys/${keyId}/toggle`, {
+      method: 'PATCH',
+    });
+  }
 }
 
 export const apiClient = new APIClient();

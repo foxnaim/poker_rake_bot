@@ -23,7 +23,7 @@ const AdminAPIKeysPage: React.FC = () => {
   const loadKeys = async () => {
     try {
       setLoading(true);
-      const data = await apiClient.request('/api/v1/admin/api-keys');
+      const data = await apiClient.getApiKeys();
       setKeys(data);
     } catch (error) {
       console.error('Error loading keys:', error);
@@ -39,13 +39,10 @@ const AdminAPIKeysPage: React.FC = () => {
         ? ['admin', ...formData.permissions]
         : formData.permissions;
       
-      const response = await apiClient.request('/api/v1/admin/api-keys', {
-        method: 'POST',
-        body: JSON.stringify({
-          client_name: formData.client_name,
-          permissions: permissions,
-          rate_limit_per_minute: formData.rate_limit_per_minute
-        }),
+      const response = await apiClient.createApiKey({
+        client_name: formData.client_name,
+        permissions: permissions,
+        rate_limit_per_minute: formData.rate_limit_per_minute
       });
       
       alert(`API Key создан!\n\nAPI Key: ${response.api_key}\nAPI Secret: ${response.api_secret}\n\nСохраните эти данные!`);
@@ -65,9 +62,7 @@ const AdminAPIKeysPage: React.FC = () => {
 
   const handleToggle = async (keyId: number, currentActive: boolean) => {
     try {
-      await apiClient.request(`/api/v1/admin/api-keys/${keyId}/toggle`, {
-        method: 'PATCH'
-      });
+      await apiClient.toggleApiKey(keyId);
       loadKeys();
     } catch (error) {
       console.error('Error toggling key:', error);
@@ -76,10 +71,10 @@ const AdminAPIKeysPage: React.FC = () => {
   };
 
   const handleDelete = async (keyId: number) => {
-    if (!confirm('Удалить этот API ключ?')) return;
+    if (!window.confirm('Удалить этот API ключ?')) return;
     
     try {
-      await apiClient.request(`/api/v1/admin/api-keys/${keyId}`, { method: 'DELETE' });
+      await apiClient.deleteApiKey(keyId);
       loadKeys();
     } catch (error) {
       console.error('Error deleting key:', error);

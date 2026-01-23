@@ -22,6 +22,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 class TestResult:
     """Результат теста"""
+    __test__ = False  # Tell pytest not to collect this as a test class
+    
     def __init__(self, name: str, passed: bool, message: str = "", duration_ms: float = 0):
         self.name = name
         self.passed = passed
@@ -31,6 +33,7 @@ class TestResult:
 
 class TestSuite:
     """Базовый класс для тестов"""
+    __test__ = False  # Tell pytest not to collect this as a test class
 
     def __init__(self, verbose: bool = False):
         self.verbose = verbose

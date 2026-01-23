@@ -42,6 +42,8 @@ services:
       DATABASE_URL: postgresql://pokerbot:${POSTGRES_PASSWORD:-pokerbot_dev}@postgres:5432/pokerbot_db
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: ${ENVIRONMENT:-development}
+      ENABLE_ADMIN_API: ${ENABLE_ADMIN_API:-1}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
     depends_on:
       postgres:
         condition: service_healthy

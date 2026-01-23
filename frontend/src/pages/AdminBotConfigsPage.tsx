@@ -111,7 +111,7 @@ const AdminBotConfigsPage: React.FC = () => {
   };
 
   const handleDelete = async (configId: number) => {
-    if (!confirm('Удалить этот конфиг?')) return;
+    if (!window.confirm('Удалить этот конфиг?')) return;
     
     try {
       await apiClient.deleteBotConfig(configId);

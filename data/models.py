@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, JSON
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
 from datetime import datetime, timezone
+from typing import Optional
 
 Base = declarative_base()
 
