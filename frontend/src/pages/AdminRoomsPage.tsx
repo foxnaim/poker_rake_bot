@@ -110,7 +110,7 @@ const AdminRoomsPage: React.FC = () => {
                 fontSize: '12px',
                 fontWeight: 'bold'
               }}>
-                {room.status}
+                {room.status === 'active' ? 'Активна' : room.status === 'onboarded' ? 'Добавлена' : room.status === 'pending' ? 'Ожидает' : room.status}
               </span>
             </div>
             <div style={{ color: '#C5C6C7', fontSize: '14px', marginTop: '8px', wordBreak: 'break-all' }}>

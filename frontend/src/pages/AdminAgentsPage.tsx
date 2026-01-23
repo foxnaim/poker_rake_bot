@@ -131,7 +131,7 @@ const AdminAgentsPage: React.FC = () => {
                   ...statusBadgeStyle,
                   background: getStatusColor(agent.status)
                 }}>
-                  {agent.status.toUpperCase()}
+                  {agent.status === 'online' ? 'ОНЛАЙН' : agent.status === 'offline' ? 'ОФФЛАЙН' : agent.status === 'busy' ? 'ЗАНЯТ' : agent.status.toUpperCase()}
                 </span>
               </div>
 
@@ -153,7 +153,7 @@ const AdminAgentsPage: React.FC = () => {
                   <span style={{
                     color: (agent.heartbeat_lag_seconds || 0) > 30 ? '#F44336' : '#4CAF50'
                   }}>
-                    {agent.heartbeat_lag_seconds?.toFixed(1) || '0'}s
+                    {agent.heartbeat_lag_seconds?.toFixed(1) || '0'}с
                   </span>
                 </div>
               </div>

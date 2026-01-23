@@ -202,7 +202,7 @@ const AdminBotConfigsPage: React.FC = () => {
           />
           <div style={rowStyle}>
             <div style={colStyle}>
-              <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Target VPIP</label>
+              <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Целевой VPIP</label>
               <input
                 type="number"
                 step="0.1"
@@ -222,7 +222,7 @@ const AdminBotConfigsPage: React.FC = () => {
               />
             </div>
             <div style={colStyle}>
-              <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Target AF</label>
+              <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Целевой AF</label>
               <input
                 type="number"
                 step="0.1"
@@ -315,7 +315,7 @@ const AdminBotConfigsPage: React.FC = () => {
                     )}
                   </span>
                   <div style={{ color: '#C5C6C7', fontSize: '12px', marginTop: '4px' }}>
-                    Bot: {bot?.alias || `ID ${config.bot_id}`}
+                    Бот: {bot?.alias || `ID ${config.bot_id}`}
                   </div>
                 </div>
                 <div>

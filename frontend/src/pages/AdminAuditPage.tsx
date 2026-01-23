@@ -214,7 +214,7 @@ const AdminAuditPage: React.FC = () => {
                     fontSize: '12px',
                     fontWeight: 'bold'
                   }}>
-                    {entry.action}
+                    {entry.action === 'create' ? 'Создать' : entry.action === 'update' ? 'Обновить' : entry.action === 'delete' ? 'Удалить' : entry.action === 'start_session' ? 'Запустить сессию' : entry.action === 'stop_session' ? 'Остановить сессию' : entry.action === 'pause_session' ? 'Приостановить сессию' : entry.action}
                   </span>
                 </td>
                 <td style={tdStyle}>
@@ -238,7 +238,7 @@ const AdminAuditPage: React.FC = () => {
                     }}>
                       {getEntityIcon(entry.entity_type)}
                     </span>
-                    {entry.entity_type}
+                    {entry.entity_type === 'bot' ? 'Бот' : entry.entity_type === 'room' ? 'Комната' : entry.entity_type === 'table' ? 'Стол' : entry.entity_type === 'bot_session' ? 'Сессия бота' : entry.entity_type === 'bot_config' ? 'Конфиг бота' : entry.entity_type === 'rake_model' ? 'Модель рейка' : entry.entity_type === 'api_key' ? 'API Ключ' : entry.entity_type}
                   </span>
                 </td>
                 <td style={tdStyle}>{entry.entity_id}</td>
@@ -294,12 +294,12 @@ const AdminAuditPage: React.FC = () => {
                   fontSize: '12px',
                   fontWeight: 'bold'
                 }}>
-                  {selectedEntry.action}
+                  {selectedEntry.action === 'create' ? 'Создать' : selectedEntry.action === 'update' ? 'Обновить' : selectedEntry.action === 'delete' ? 'Удалить' : selectedEntry.action === 'start_session' ? 'Запустить сессию' : selectedEntry.action === 'stop_session' ? 'Остановить сессию' : selectedEntry.action === 'pause_session' ? 'Приостановить сессию' : selectedEntry.action}
                 </span>
               </div>
               <div style={detailItemStyle}>
                 <label style={detailLabelStyle}>Сущность:</label>
-                <span>{selectedEntry.entity_type} #{selectedEntry.entity_id}</span>
+                <span>{selectedEntry.entity_type === 'bot' ? 'Бот' : selectedEntry.entity_type === 'room' ? 'Комната' : selectedEntry.entity_type === 'table' ? 'Стол' : selectedEntry.entity_type === 'bot_session' ? 'Сессия бота' : selectedEntry.entity_type === 'bot_config' ? 'Конфиг бота' : selectedEntry.entity_type === 'rake_model' ? 'Модель рейка' : selectedEntry.entity_type === 'api_key' ? 'API Ключ' : selectedEntry.entity_type} #{selectedEntry.entity_id}</span>
               </div>
               <div style={detailItemStyle}>
                 <label style={detailLabelStyle}>Админ ключ:</label>

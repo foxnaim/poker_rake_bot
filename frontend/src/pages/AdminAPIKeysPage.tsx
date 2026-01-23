@@ -45,7 +45,7 @@ const AdminAPIKeysPage: React.FC = () => {
         rate_limit_per_minute: formData.rate_limit_per_minute
       });
       
-      alert(`API Key создан!\n\nAPI Key: ${response.api_key}\nAPI Secret: ${response.api_secret}\n\nСохраните эти данные!`);
+      alert(`API ключ создан!\n\nAPI ключ: ${response.api_key}\nAPI секрет: ${response.api_secret}\n\nСохраните эти данные!`);
       setShowForm(false);
       setFormData({
         client_name: '',
@@ -122,7 +122,7 @@ const AdminAPIKeysPage: React.FC = () => {
                 }}
                 style={{ marginRight: '8px' }}
               />
-              decide_only
+              Только решения
             </label>
             <label style={{ color: '#C5C6C7', display: 'flex', alignItems: 'center', marginRight: '20px' }}>
               <input
@@ -136,7 +136,7 @@ const AdminAPIKeysPage: React.FC = () => {
                 }}
                 style={{ marginRight: '8px' }}
               />
-              log_only
+              Только логирование
             </label>
             <label style={{ color: '#C5C6C7', display: 'flex', alignItems: 'center' }}>
               <input
@@ -145,12 +145,12 @@ const AdminAPIKeysPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, is_admin: e.target.checked })}
                 style={{ marginRight: '8px' }}
               />
-              admin
+              Администратор
             </label>
           </div>
           <input
             type="number"
-            placeholder="Rate limit (запросов в минуту)"
+            placeholder="Лимит запросов (в минуту)"
             value={formData.rate_limit_per_minute}
             onChange={(e) => setFormData({ ...formData, rate_limit_per_minute: parseInt(e.target.value) })}
             style={inputStyle}

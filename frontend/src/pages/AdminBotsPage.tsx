@@ -73,7 +73,7 @@ const AdminBotsPage: React.FC = () => {
           <h3 style={{ color: '#66FCF1', marginTop: 0 }}>Создать бота</h3>
           <input
             type="text"
-            placeholder="Alias (имя бота)"
+            placeholder="Имя бота"
             value={formData.alias}
             onChange={(e) => setFormData({ ...formData, alias: e.target.value })}
             style={inputStyle}

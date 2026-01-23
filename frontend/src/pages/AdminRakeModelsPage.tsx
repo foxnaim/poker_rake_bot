@@ -199,7 +199,7 @@ const AdminRakeModelsPage: React.FC = () => {
               />
             </div>
             <div style={colStyle}>
-              <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Cap (макс. рейк)</label>
+              <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Макс. рейк (Cap)</label>
               <input
                 type="number"
                 step="0.01"
@@ -258,7 +258,7 @@ const AdminRakeModelsPage: React.FC = () => {
               </div>
               <div style={{ color: '#C5C6C7', fontSize: '14px', marginTop: '10px' }}>
                 <div>Процент: {model.percent}%</div>
-                {model.cap && <div>Cap: ${model.cap.toFixed(2)}</div>}
+                {model.cap && <div>Макс. рейк: ${model.cap.toFixed(2)}</div>}
                 <div>Мин. банк: ${model.min_pot?.toFixed(2) || '0.00'}</div>
                 {model.params && (
                   <div style={{ fontSize: '12px', marginTop: '8px', opacity: 0.7 }}>

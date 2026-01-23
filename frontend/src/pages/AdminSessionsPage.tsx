@@ -135,7 +135,7 @@ const AdminSessionsPage: React.FC = () => {
           </select>
           <input
             type="text"
-            placeholder="Лимит (NL10, NL50, etc.)"
+            placeholder="Лимит (NL10, NL50 и т.д.)"
             value={formData.limit}
             onChange={(e) => setFormData({ ...formData, limit: e.target.value })}
             style={inputStyle}
@@ -159,7 +159,7 @@ const AdminSessionsPage: React.FC = () => {
                 fontSize: '12px',
                 fontWeight: 'bold'
               }}>
-                {session.status}
+                {session.status === 'running' ? 'Запущена' : session.status === 'paused' ? 'Приостановлена' : session.status === 'stopped' ? 'Остановлена' : session.status === 'error' ? 'Ошибка' : session.status}
               </span>
             </div>
             <div style={{ color: '#C5C6C7', fontSize: '14px', marginTop: '10px' }}>

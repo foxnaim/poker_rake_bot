@@ -83,7 +83,7 @@ const OpponentsPage: React.FC = () => {
                 ...(filter === f ? activeFilterStyle : {})
               }}
             >
-              {f.toUpperCase().replace('_', ' ')}
+              {f === 'all' ? 'ВСЕ' : f === 'fish' ? 'РЫБА' : f === 'nit' ? 'НИТ' : f === 'tag' ? 'TAG' : f === 'lag' ? 'LAG' : f === 'calling_station' ? 'КОЛЛИНГ-СТАНЦИЯ' : f.toUpperCase().replace('_', ' ')}
             </button>
           ))}
         </div>
