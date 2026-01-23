@@ -18,6 +18,7 @@ import AdminBotConfigsPage from './pages/AdminBotConfigsPage';
 import AdminRakeModelsPage from './pages/AdminRakeModelsPage';
 import AdminAPIKeysPage from './pages/AdminAPIKeysPage';
 import AdminAgentsPage from './pages/AdminAgentsPage';
+import AdminAuditPage from './pages/AdminAuditPage';
 import './App.css';
 
 const App: React.FC = () => {
@@ -40,6 +41,7 @@ const App: React.FC = () => {
             <Route path="/admin/api-keys" element={<AdminAPIKeysPage />} />
             <Route path="/admin/sessions" element={<AdminSessionsPage />} />
             <Route path="/admin/agents" element={<AdminAgentsPage />} />
+            <Route path="/admin/audit" element={<AdminAuditPage />} />
           </Routes>
         </main>
       </div>

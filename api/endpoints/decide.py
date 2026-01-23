@@ -4,6 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy.orm import Session
 import time
 import json
+import asyncio
+import os
+from concurrent.futures import ThreadPoolExecutor
 
 from api.schemas import GameStateRequest, DecisionResponse
 from api.decision_maker import make_decision
@@ -13,6 +16,12 @@ from api.auth import optional_api_key
 from data.database import get_db
 
 router = APIRouter(prefix="/api/v1", tags=["decisions"])
+
+# Timeout для принятия решений (ms)
+DECIDE_TIMEOUT_MS = int(os.getenv("DECIDE_TIMEOUT_MS", "500"))
+
+# ThreadPool для блокирующих операций
+_executor = ThreadPoolExecutor(max_workers=4)
 
 def _resolve_table_key(db: Session, table_id_in: str | None) -> str | None:
     """Пытается привести table_id к Table.external_table_id."""
@@ -80,7 +89,7 @@ async def decide_endpoint(
                 )
     
     start_time = time.time()
-    
+
     try:
         # Нормализуем table_id -> table_key ПОСЛЕ HMAC-проверки,
         # чтобы подпись считалась по оригинальному body, но логирование/кэш были консистентны.
@@ -91,7 +100,44 @@ async def decide_endpoint(
             except Exception:
                 pass
 
-        decision = make_decision(request)
+        # Выполняем make_decision с timeout
+        loop = asyncio.get_event_loop()
+        try:
+            decision = await asyncio.wait_for(
+                loop.run_in_executor(_executor, make_decision, request),
+                timeout=DECIDE_TIMEOUT_MS / 1000.0
+            )
+        except asyncio.TimeoutError:
+            # Timeout - используем fallback
+            from api.decision_stub import make_decision_stub
+            from api.metrics import decision_errors_total
+            decision_errors_total.labels(limit_type=request.limit_type, error_type="Timeout").inc()
+
+            fallback = make_decision_stub(request)
+            latency_ms = int((time.time() - start_time) * 1000)
+
+            # Логируем инцидент
+            from api.safe_mode import safe_mode
+            safe_mode.buffer_decision({
+                "hand_id": request.hand_id,
+                "table_id": request.table_id,
+                "timeout": True,
+                "timeout_ms": DECIDE_TIMEOUT_MS,
+                "actual_ms": latency_ms
+            })
+
+            return DecisionResponse(
+                action=fallback.get("action", "check"),
+                amount=fallback.get("amount"),
+                table_key=table_key,
+                reasoning={
+                    **(fallback.get("reasoning") or {}),
+                    "fallback": True,
+                    "timeout": True,
+                    "timeout_ms": DECIDE_TIMEOUT_MS,
+                },
+                latency_ms=latency_ms,
+            )
         latency_ms = decision.get("latency_ms", 0)
         
         # Обновляем метрики

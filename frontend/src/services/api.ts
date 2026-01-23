@@ -237,6 +237,23 @@ export class APIClient {
   async getSession(sessionId: string): Promise<any> {
     return this.request(`/api/v1/admin/session/${sessionId}`);
   }
+
+  // Audit Log methods
+  async getAuditLog(limit: number = 100, action?: string, entityType?: string): Promise<any[]> {
+    const params = new URLSearchParams();
+    params.append('limit', limit.toString());
+    if (action) params.append('action', action);
+    if (entityType) params.append('entity_type', entityType);
+    return this.request(`/api/v1/admin/audit?${params.toString()}`);
+  }
+
+  async getAuditSummary(): Promise<any> {
+    return this.request('/api/v1/admin/audit/summary');
+  }
+
+  async getEntityAudit(entityType: string, entityId: number): Promise<any[]> {
+    return this.request(`/api/v1/admin/audit/entity/${entityType}/${entityId}`);
+  }
 }
 
 export const apiClient = new APIClient();

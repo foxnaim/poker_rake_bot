@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pokerbot-config
+  namespace: pokerbot
+data:
+  # API settings
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  CORS_ORIGINS: "*"
+
+  # Features
+  ENABLE_ADMIN_API: "1"
+  SAFE_MODE_ENABLED: "1"
+  ENABLE_SECURITY_HEADERS: "true"
+
+  # Timeouts
+  DECIDE_TIMEOUT_MS: "500"
+
+  # Rate limiting
+  RATE_LIMIT_PER_MINUTE: "120"
+
+  # Logging
+  LOG_LEVEL: "INFO"
+
+  # Training
+  CHECKPOINT_DIR: "/app/checkpoints"

@@ -97,6 +97,12 @@ const Navbar: React.FC = () => {
         >
           🖥️ Agents
         </Link>
+        <Link
+          to="/admin/audit"
+          style={{...linkStyle, ...(isActive('/admin/audit') ? activeLinkStyle : {})}}
+        >
+          📋 Audit
+        </Link>
       </div>
     </nav>
   );

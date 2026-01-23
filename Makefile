@@ -2,22 +2,39 @@
 
 help:
 	@echo "Доступные команды:"
-	@echo "  make install    - Установить зависимости"
-	@echo "  make check-deps - Проверить что зависимости установлены"
-	@echo "  make build      - Проверить компиляцию всех модулей"
-	@echo "  make lint       - Проверить код линтером (если установлен)"
-	@echo "  make check      - Полная проверка: build + lint + test"
-	@echo "  make test       - Запустить все тесты"
-	@echo "  make test-e2e   - Запустить E2E тест операторского flow"
-	@echo "  make test-load  - Запустить load test (требует запущенный API)"
-	@echo "  make test-simulator-load - Тесты симулятора под нагрузкой"
+	@echo ""
+	@echo "📦 Установка:"
+	@echo "  make install        - Установить зависимости"
+	@echo "  make check-deps     - Проверить что зависимости установлены"
+	@echo ""
+	@echo "🔨 Сборка и проверка:"
+	@echo "  make build          - Проверить компиляцию всех модулей"
+	@echo "  make lint           - Проверить код линтером"
+	@echo "  make check          - Полная проверка: build + lint"
+	@echo "  make check-schema   - Проверка схемы БД (CI-style)"
+	@echo ""
+	@echo "🧪 Тестирование:"
+	@echo "  make test           - Запустить все тесты"
+	@echo "  make test-e2e       - E2E тест операторского flow"
+	@echo "  make test-load      - Load test (требует запущенный API)"
+	@echo "  make test-migrations - Тест миграций с нуля"
+	@echo "  make test-full-cycle - Полный цикл через agent-simulator"
 	@echo "  make test-monitoring - Тесты мониторинга"
-	@echo "  make backup-setup - Настроить автоматические бэкапы"
-	@echo "  make run        - Запустить API локально"
-	@echo "  make smoke      - Быстрый smoke API (нужен запущенный API)"
-	@echo "  make docker-up  - Запустить через Docker Compose"
-	@echo "  make docker-down - Остановить Docker Compose"
-	@echo "  make migrate    - Применить миграции БД"
+	@echo ""
+	@echo "🚀 Запуск:"
+	@echo "  make run            - Запустить API локально"
+	@echo "  make docker-up      - Запустить через Docker Compose"
+	@echo "  make docker-down    - Остановить Docker Compose"
+	@echo "  make smoke          - Быстрый smoke тест API"
+	@echo "  make simulate-agent - Запустить симулятор агента"
+	@echo ""
+	@echo "🗄️ База данных:"
+	@echo "  make migrate        - Применить миграции v1.2"
+	@echo "  make migrate-all    - Применить ВСЕ миграции"
+	@echo ""
+	@echo "📚 Документация:"
+	@echo "  make docs           - Открыть документацию"
+	@echo "  make backup-setup   - Настроить автоматические бэкапы"
 
 install:
 	python3 -m pip install -r requirements.txt
@@ -105,3 +122,48 @@ lint:
 check: build lint
 	@echo "✅ Полная проверка завершена: build + lint"
 	@echo "💡 Для запуска тестов используйте: make test"
+
+# ============================================
+# Новые команды v1.3
+# ============================================
+
+check-schema:
+	@echo "🔍 Проверка схемы БД..."
+	@if [ -z "$$DATABASE_URL" ]; then \
+		echo "⚠️  DATABASE_URL не установлен, пробую docker-compose..."; \
+		export DATABASE_URL="postgresql://pokerbot:pokerbot@localhost:5432/pokerbot_db"; \
+	fi
+	python3 scripts/check_schema.py --verbose
+
+test-migrations:
+	@echo "🔄 Тестирование миграций..."
+	TEST_DATABASE_URL="postgresql://pokerbot:pokerbot@localhost:5432/pokerbot_test" \
+		python3 -m pytest tests/test_migrations.py -v
+
+test-full-cycle:
+	@echo "🔁 Полный цикл тестирования агента..."
+	python3 -m utils.agent_simulator --test --hands 10 --api-url http://localhost:8000
+
+simulate-agent:
+	@echo "🤖 Запуск симулятора агента..."
+	@echo "💡 Нажмите Ctrl+C для остановки"
+	python3 -m utils.agent_simulator --agent-id "simulator_$(shell date +%s)"
+
+migrate-all:
+	@echo "📦 Применяю все миграции..."
+	@docker-compose exec -T postgres psql -U pokerbot -d pokerbot_db < data/init.sql || true
+	@docker-compose exec -T postgres psql -U pokerbot -d pokerbot_db < data/migrations_v1_2.sql || true
+	@docker-compose exec -T postgres psql -U pokerbot -d pokerbot_db < data/migrations_v1_3_week2.sql || true
+	@docker-compose exec -T postgres psql -U pokerbot -d pokerbot_db < data/migrations_week3_rake.sql || true
+	@echo "✅ Миграции применены"
+
+docs:
+	@echo "📚 Документация:"
+	@echo "  Операторский мануал: docs/OPERATOR_MANUAL.md"
+	@echo "  Технический мануал:  docs/TECHNICAL_MANUAL.md"
+	@echo ""
+	@if command -v open >/dev/null 2>&1; then \
+		open docs/OPERATOR_MANUAL.md; \
+	elif command -v xdg-open >/dev/null 2>&1; then \
+		xdg-open docs/OPERATOR_MANUAL.md; \
+	fi

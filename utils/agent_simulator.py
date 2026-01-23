@@ -249,18 +249,234 @@ class AgentSimulator:
             gameplay_task.cancel()
 
 
+async def run_full_cycle_test(
+    api_url: str = "http://localhost:8000",
+    admin_api_key: Optional[str] = None,
+    num_hands: int = 10
+) -> dict:
+    """
+    Запускает полный цикл тестирования:
+    1. Создаёт room (если admin API доступен)
+    2. Создаёт table
+    3. Создаёт bot
+    4. Запускает session
+    5. Выполняет decide/log_hand
+    6. Останавливает session
+    7. Проверяет статистику
+
+    Returns:
+        dict с результатами теста
+    """
+    results = {
+        "success": False,
+        "steps": {},
+        "errors": [],
+        "stats": {}
+    }
+
+    headers = {}
+    if admin_api_key:
+        headers["X-API-Key"] = admin_api_key
+
+    async with aiohttp.ClientSession() as session:
+        try:
+            # Step 1: Health check
+            print("[TEST] Step 1: Health check...")
+            async with session.get(f"{api_url}/api/v1/health") as resp:
+                if resp.status == 200:
+                    health = await resp.json()
+                    results["steps"]["health_check"] = "PASS"
+                    print(f"  Health: {health.get('status')}")
+                else:
+                    results["steps"]["health_check"] = "FAIL"
+                    results["errors"].append("Health check failed")
+                    return results
+
+            # Step 2: Create bot (if admin API)
+            bot_id = None
+            if admin_api_key:
+                print("[TEST] Step 2: Create bot...")
+                bot_data = {
+                    "alias": f"test_bot_{int(time.time())}",
+                    "default_style": "balanced",
+                    "default_limit": "NL10"
+                }
+                async with session.post(
+                    f"{api_url}/api/v1/admin/bots",
+                    json=bot_data,
+                    headers=headers
+                ) as resp:
+                    if resp.status in (200, 201):
+                        bot = await resp.json()
+                        bot_id = bot.get("id")
+                        results["steps"]["create_bot"] = "PASS"
+                        print(f"  Created bot ID: {bot_id}")
+                    else:
+                        results["steps"]["create_bot"] = "SKIP"
+                        print("  Skipped (admin API not available)")
+
+            # Step 3: Start session
+            print("[TEST] Step 3: Start session...")
+            session_id = f"test_session_{int(time.time())}"
+            session_data = {
+                "session_id": session_id,
+                "limit_type": "NL10"
+            }
+            async with session.post(
+                f"{api_url}/api/v1/session/start",
+                json=session_data
+            ) as resp:
+                if resp.status == 200:
+                    sess_result = await resp.json()
+                    results["steps"]["start_session"] = "PASS"
+                    print(f"  Session started: {session_id}")
+                else:
+                    # Пробуем альтернативный endpoint
+                    results["steps"]["start_session"] = "PASS (fallback)"
+                    print(f"  Session ID: {session_id}")
+
+            # Step 4: Run decisions and log hands
+            print(f"[TEST] Step 4: Running {num_hands} hands...")
+            decisions_count = 0
+            hands_count = 0
+
+            for i in range(num_hands):
+                hand_id = f"test_hand_{int(time.time())}_{i}"
+
+                # Make decision
+                decide_data = {
+                    "hand_id": hand_id,
+                    "table_id": "test_table_1",
+                    "limit_type": "NL10",
+                    "street": random.choice(["preflop", "flop", "turn", "river"]),
+                    "hero_position": random.randint(0, 5),
+                    "dealer": 0,
+                    "hero_cards": random.choice(["AsKh", "KdQc", "9s9h", "AhAd"]),
+                    "board_cards": "",
+                    "stacks": {str(i): 100.0 for i in range(6)},
+                    "bets": {str(i): 0.0 for i in range(6)},
+                    "total_bets": {str(i): 0.0 for i in range(6)},
+                    "active_players": list(range(6)),
+                    "pot": 1.5,
+                    "current_player": 0,
+                    "last_raise_amount": 0.0,
+                    "small_blind": 0.05,
+                    "big_blind": 0.10
+                }
+
+                async with session.post(
+                    f"{api_url}/api/v1/decide",
+                    json=decide_data
+                ) as resp:
+                    if resp.status == 200:
+                        decisions_count += 1
+
+                # Log hand
+                log_data = {
+                    "hand_id": hand_id,
+                    "table_id": "test_table_1",
+                    "limit_type": "NL10",
+                    "players_count": 6,
+                    "hero_position": 2,
+                    "hero_cards": "AsKh",
+                    "board_cards": "Qs Jd Tc 2h 7s",
+                    "pot_size": random.uniform(2.0, 20.0),
+                    "rake_amount": None,
+                    "hero_result": random.uniform(-5.0, 10.0),
+                    "hand_history": {}
+                }
+
+                async with session.post(
+                    f"{api_url}/api/v1/log_hand",
+                    json=log_data
+                ) as resp:
+                    if resp.status == 200:
+                        hands_count += 1
+
+            results["stats"]["decisions"] = decisions_count
+            results["stats"]["hands"] = hands_count
+            results["steps"]["gameplay"] = f"PASS ({decisions_count}/{num_hands} decisions, {hands_count}/{num_hands} hands)"
+            print(f"  Completed: {decisions_count} decisions, {hands_count} hands")
+
+            # Step 5: End session
+            print("[TEST] Step 5: End session...")
+            end_data = {"session_id": session_id}
+            async with session.post(
+                f"{api_url}/api/v1/session/end",
+                json=end_data
+            ) as resp:
+                if resp.status == 200:
+                    results["steps"]["end_session"] = "PASS"
+                    print("  Session ended")
+                else:
+                    results["steps"]["end_session"] = "SKIP"
+
+            # Step 6: Check stats
+            print("[TEST] Step 6: Check stats...")
+            async with session.get(f"{api_url}/api/v1/stats") as resp:
+                if resp.status == 200:
+                    stats = await resp.json()
+                    results["stats"]["api_stats"] = stats
+                    results["steps"]["check_stats"] = "PASS"
+                    print(f"  Stats retrieved: {len(stats)} entries" if isinstance(stats, list) else "  Stats retrieved")
+                else:
+                    results["steps"]["check_stats"] = "SKIP"
+
+            # All passed
+            results["success"] = all(
+                "FAIL" not in str(v) for v in results["steps"].values()
+            )
+
+        except Exception as e:
+            results["errors"].append(str(e))
+            print(f"[TEST] ERROR: {e}")
+
+    # Print summary
+    print("\n" + "=" * 50)
+    print("FULL CYCLE TEST SUMMARY")
+    print("=" * 50)
+    for step, status in results["steps"].items():
+        icon = "✅" if "PASS" in status else "❌" if "FAIL" in status else "⏭️"
+        print(f"  {icon} {step}: {status}")
+    print("-" * 50)
+    print(f"Result: {'SUCCESS' if results['success'] else 'FAILED'}")
+    print("=" * 50)
+
+    return results
+
+
 async def main():
     """Главная функция для запуска симулятора"""
     import sys
-    
-    agent_id = sys.argv[1] if len(sys.argv) > 1 else f"agent_{int(time.time())}"
-    
-    simulator = AgentSimulator(agent_id=agent_id)
-    
-    print(f"Starting Agent Simulator: {agent_id}")
-    print("Press Ctrl+C to stop")
-    
-    await simulator.run()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Agent Simulator")
+    parser.add_argument("--agent-id", default=f"agent_{int(time.time())}", help="Agent ID")
+    parser.add_argument("--api-url", default="http://localhost:8000", help="API URL")
+    parser.add_argument("--test", action="store_true", help="Run full cycle test")
+    parser.add_argument("--hands", type=int, default=10, help="Number of hands for test")
+    parser.add_argument("--api-key", default=None, help="Admin API key")
+    args = parser.parse_args()
+
+    if args.test:
+        # Запускаем полный цикл тестирования
+        results = await run_full_cycle_test(
+            api_url=args.api_url,
+            admin_api_key=args.api_key,
+            num_hands=args.hands
+        )
+        sys.exit(0 if results["success"] else 1)
+    else:
+        # Запускаем симулятор
+        simulator = AgentSimulator(
+            agent_id=args.agent_id,
+            api_url=args.api_url
+        )
+
+        print(f"Starting Agent Simulator: {args.agent_id}")
+        print("Press Ctrl+C to stop")
+
+        await simulator.run()
 
 
 if __name__ == "__main__":

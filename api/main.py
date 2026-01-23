@@ -65,6 +65,7 @@ if ENABLE_ADMIN_API:
         admin_rake_models as admin_rake_models_router,
         admin_bot_configs as admin_bot_configs_router,
         admin_sessions as admin_sessions_router,
+        admin_audit as admin_audit_router,
     )
 
     app.include_router(admin_bots_router.router)
@@ -73,6 +74,7 @@ if ENABLE_ADMIN_API:
     app.include_router(admin_rake_models_router.router)
     app.include_router(admin_bot_configs_router.router)
     app.include_router(admin_sessions_router.router)
+    app.include_router(admin_audit_router.router)
 
 # Middleware (порядок важен!)
 app.add_middleware(TimingMiddleware)

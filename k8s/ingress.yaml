@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pokerbot-ingress
+  namespace: pokerbot
+  annotations:
+    # Для nginx ingress controller
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # WebSocket support
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
+    # Rate limiting (опционально)
+    # nginx.ingress.kubernetes.io/limit-rps: "50"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: pokerbot.example.com  # Заменить на реальный домен
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pokerbot-api
+                port:
+                  number: 80
+  # TLS (опционально, для HTTPS)
+  # tls:
+  #   - hosts:
+  #       - pokerbot.example.com
+  #     secretName: pokerbot-tls
