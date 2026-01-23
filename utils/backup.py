@@ -14,13 +14,14 @@ import shutil
 import schedule
 import time
 import threading
-from datetime import datetime
+from datetime import datetime, timezone, timezone
 from pathlib import Path
 from typing import Optional, List
 import json
 import logging
 
 from data.database import DATABASE_URL
+from utils.backup_cloud import get_cloud_storage, CloudBackupStorage
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +29,11 @@ logger = logging.getLogger(__name__)
 class BackupManager:
     """Менеджер бэкапов"""
     
-    def __init__(self, backup_dir: Optional[Path] = None):
+    def __init__(self, backup_dir: Optional[Path] = None, cloud_storage: Optional[CloudBackupStorage] = None):
         """
         Args:
             backup_dir: Директория для бэкапов (по умолчанию ./backups)
+            cloud_storage: Облачное хранилище для синхронизации (опционально)
         """
         if backup_dir is None:
             backup_dir = Path("backups")
@@ -44,6 +46,9 @@ class BackupManager:
         self.checkpoint_backup_dir = self.backup_dir / "checkpoints"
         self.db_backup_dir.mkdir(exist_ok=True)
         self.checkpoint_backup_dir.mkdir(exist_ok=True)
+        
+        # Облачное хранилище
+        self.cloud_storage = cloud_storage or get_cloud_storage()
     
     def backup_database(self, full: bool = True) -> Path:
         """
@@ -55,7 +60,7 @@ class BackupManager:
         Returns:
             Путь к файлу бэкапа
         """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         backup_file = self.db_backup_dir / f"pokerbot_db_{timestamp}.sql"
         
         # Парсим DATABASE_URL
@@ -100,6 +105,12 @@ class BackupManager:
             with open(metadata_file, 'w') as f:
                 json.dump(metadata, f, indent=2)
             
+            # Загружаем в облако если настроено
+            if self.cloud_storage and self.cloud_storage.provider != "local":
+                remote_path = f"database/{backup_file.name}"
+                if self.cloud_storage.upload(backup_file, remote_path):
+                    logger.info(f"Backup uploaded to {self.cloud_storage.provider}: {remote_path}")
+            
             return backup_file
         
         except subprocess.CalledProcessError as e:
@@ -123,7 +134,7 @@ class BackupManager:
             print("Директория checkpoints не найдена")
             return []
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         backup_paths = []
         
         if limit_type:
@@ -196,7 +207,7 @@ class BackupManager:
         Args:
             days: Количество дней для хранения
         """
-        cutoff_date = datetime.now().timestamp() - (days * 24 * 3600)
+        cutoff_date = datetime.now(timezone.utc).timestamp() - (days * 24 * 3600)
 
         for backup_file in self.db_backup_dir.glob("*.sql"):
             if backup_file.stat().st_mtime < cutoff_date:
@@ -308,7 +319,7 @@ class BackupManager:
         Returns:
             Словарь с информацией о бэкапе
         """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
         result = {
             "timestamp": timestamp,

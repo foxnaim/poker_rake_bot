@@ -14,7 +14,7 @@ import json
 import logging
 from pathlib import Path
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +117,7 @@ class FingerprintController:
 
         # Запись действия
         action_record = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "hand_id": hand_id,
             "street": street,
             "action": action,
@@ -474,7 +474,7 @@ class FingerprintController:
         fingerprint = self.analyze_fingerprint()
 
         report = {
-            "generated_at": datetime.now().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "total_hands_analyzed": len(self.action_history),
             "fingerprint": fingerprint,
             "raw_counts": {
@@ -608,6 +608,30 @@ class AntiPatternRouter:
                     action = "fold"
                     amount = None
         
+        # 6. Периодические thin value bets (расширенный fingerprint)
+        if action == "check" and self._should_thin_value_bet(street, game_state, strategy):
+            action = "raise"
+            amount = pot * random.uniform(0.25, 0.40)  # Thin value bet
+        
+        # 7. Случайные overbets (5% случаев)
+        if action == "raise" and random.random() < 0.05:
+            amount = pot * random.uniform(1.2, 2.0)  # Overbet 120-200% пота
+        
+        # 8. Периодические min-donks (редко, но важно)
+        if street != "preflop" and action == "check" and self._should_min_donk(street, hero_position):
+            action = "raise"
+            amount = pot * 0.15  # Min donk bet
+        
+        # 9. Случайные slow-plays (чек с сильной рукой)
+        if action == "raise" and self._should_slow_play(street, game_state, strategy):
+            action = "check"
+            amount = None
+        
+        # 10. Периодические float IP (call с целью блефа на следующей улице)
+        if action == "fold" and self._should_float_ip(street, hero_position, game_state):
+            action = "call"
+            amount = None
+        
         return action, amount
     
     def _should_donk_bet(self, street: str, hero_position: int, game_state: Dict) -> bool:
@@ -669,6 +693,53 @@ class AntiPatternRouter:
         # В реальной реализации нужно анализировать силу руки
         raise_prob = strategy.get("raise", 0.0)
         return raise_prob > 0.5
+    
+    def _should_thin_value_bet(self, street: str, game_state: Dict, strategy: Dict[str, float]) -> bool:
+        """Проверяет, нужно ли сделать thin value bet вместо чека"""
+        # Thin value bet: ставка с маргинальной рукой для value
+        # Чаще на терне/ривере IP против фишей
+        hero_position = game_state.get("hero_position", 0)
+        is_ip = hero_position >= 3
+        
+        if street in ["turn", "river"] and is_ip:
+            # 8-12% случаев делаем thin value bet
+            return random.random() < 0.10
+        return False
+    
+    def _should_min_donk(self, street: str, hero_position: int) -> bool:
+        """Проверяет, нужно ли сделать min donk bet"""
+        # Min donk: очень маленькая ставка OOP (редко, но важно для fingerprint)
+        is_oop = hero_position < 3
+        if street == "flop" and is_oop:
+            # 2-4% случаев на флопе
+            return random.random() < 0.03
+        return False
+    
+    def _should_slow_play(self, street: str, game_state: Dict, strategy: Dict[str, float]) -> bool:
+        """Проверяет, нужно ли сделать slow-play (чек с сильной рукой)"""
+        # Slow-play: чек с очень сильной рукой для постройки пота
+        # Чаще на флопе/терне с монстрами
+        if street in ["flop", "turn"]:
+            # Если стратегия сильно склоняется к raise (сильная рука)
+            raise_prob = strategy.get("raise", 0.0)
+            if raise_prob > 0.85:
+                # 5-8% случаев делаем slow-play
+                return random.random() < 0.06
+        return False
+    
+    def _should_float_ip(self, street: str, hero_position: int, game_state: Dict) -> bool:
+        """Проверяет, нужно ли сделать float IP (call с целью блефа)"""
+        # Float: call IP с целью блефа на следующей улице
+        is_ip = hero_position >= 3
+        pot = game_state.get("pot", 0.0)
+        last_bet = game_state.get("last_raise_amount", 0.0)
+        
+        if street in ["flop", "turn"] and is_ip:
+            # Float если ставка небольшая относительно пота (< 40%)
+            if last_bet > 0 and pot > 0 and (last_bet / pot) < 0.4:
+                # 10-15% случаев делаем float
+                return random.random() < 0.12
+        return False
     
     def add_timing_delay(self) -> float:
         """

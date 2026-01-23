@@ -3,7 +3,7 @@
 from data.database import SessionLocal, init_db
 from data.models import Hand, OpponentProfile
 from brain.opponent_profiler import opponent_profiler
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import random
 
 def add_test_data():
@@ -45,7 +45,7 @@ def add_test_data():
                     }
                     for j in range(1, 6) if j != i % 6
                 },
-                timestamp=datetime.utcnow() - timedelta(hours=random.randint(0, 24))
+                timestamp=datetime.now(timezone.utc) - timedelta(hours=random.randint(0, 24))
             )
             db.add(hand)
         

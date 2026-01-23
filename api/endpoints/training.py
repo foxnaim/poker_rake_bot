@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 import os
 
@@ -34,7 +34,7 @@ def run_training(format: str, iterations: int, checkpoint_interval: int = 2000):
         training_state["current_iteration"] = 0
         training_state["total_iterations"] = iterations
         training_state["format"] = format
-        training_state["start_time"] = datetime.utcnow()
+        training_state["start_time"] = datetime.now(timezone.utc)
         training_state["stop_requested"] = False
 
         # Реальный training pipeline проекта: MCCFR + GameTree + save_checkpoint (pickle)
@@ -174,13 +174,13 @@ async def get_training_status():
 
     estimated_completion = None
     if training_state["is_running"] and training_state["current_iteration"] > 0:
-        elapsed = (datetime.utcnow() - training_state["start_time"]).total_seconds()
+        elapsed = (datetime.now(timezone.utc) - training_state["start_time"]).total_seconds()
         iterations_left = training_state["total_iterations"] - training_state["current_iteration"]
         time_per_iteration = elapsed / training_state["current_iteration"]
         seconds_left = iterations_left * time_per_iteration
 
         from datetime import timedelta
-        estimated_completion = datetime.utcnow() + timedelta(seconds=seconds_left)
+        estimated_completion = datetime.now(timezone.utc) + timedelta(seconds=seconds_left)
 
     return TrainingStatus(
         is_running=training_state["is_running"],

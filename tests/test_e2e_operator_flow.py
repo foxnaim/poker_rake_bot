@@ -11,8 +11,11 @@ E2E тест полного операторского flow с table_key.
 """
 
 import os
+import sys
+
 # Включаем admin API ДО импорта app
 os.environ["ENABLE_ADMIN_API"] = "1"
+os.environ["TESTING"] = "1"  # Для ослабления rate limiting
 
 import pytest
 from sqlalchemy.orm import Session
@@ -20,6 +23,9 @@ from datetime import datetime, timezone
 
 fastapi = pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
+
+# Добавляем корень проекта в path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data.database import SessionLocal, init_db
 from data.models import Bot, Room, Table, BotConfig, BotSession, Agent

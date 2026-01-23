@@ -3,7 +3,7 @@
 import argparse
 import schedule
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
@@ -57,7 +57,7 @@ class AutoTrainer:
             should_close = True
         
         try:
-            period_start = datetime.utcnow() - timedelta(hours=hours)
+            period_start = datetime.now(timezone.utc) - timedelta(hours=hours)
             min_pot = self.min_pot_for_training.get(limit_type, 5.0)
             
             hands = db.query(Hand).filter(
@@ -151,7 +151,7 @@ class AutoTrainer:
             checkpoint.file_path = str(new_checkpoint_path)
             checkpoint.training_iterations = mccfr.iterations
             checkpoint.metrics = mccfr.get_statistics()
-            checkpoint.updated_at = datetime.utcnow()
+            checkpoint.updated_at = datetime.now(timezone.utc)
             db.commit()
             
             print(f"Дообучение завершено для {limit_type}. Новый чекпоинт: {new_checkpoint_path}")

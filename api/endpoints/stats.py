@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 from api.schemas import (
     StatsResponse,
@@ -342,7 +342,7 @@ async def get_winrate_stats(
     from data.models import Hand
 
     # Период
-    since = datetime.utcnow() - timedelta(days=days)
+    since = datetime.now(timezone.utc) - timedelta(days=days)
 
     # Запрос рук за период
     query = db.query(

@@ -4,7 +4,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from typing import List, Dict
 import json
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 
 from api.metrics import (
     bot_vpip, bot_pfr, bot_aggression_factor, bot_winrate_bb_100,
@@ -72,7 +72,7 @@ async def websocket_endpoint(websocket: WebSocket):
         # Отправляем начальные данные
         await manager.send_personal_message({
             "type": "connected",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "message": "Connected to Poker Rake Bot live stream"
         }, websocket)
         
@@ -88,7 +88,7 @@ async def websocket_endpoint(websocket: WebSocket):
             )
 
             # Вычисляем requests_per_sec через rate (delta за интервал)
-            current_time = datetime.utcnow()
+            current_time = datetime.now(timezone.utc)
             current_request_count = get_metric_value(http_requests_total, {})
 
             requests_per_sec = 0.0
@@ -104,7 +104,7 @@ async def websocket_endpoint(websocket: WebSocket):
             # Получаем значения метрик
             stats = {
                 "type": "stats",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "metrics": {
                     "winrate_nl10": get_metric_value(bot_winrate_bb_100, {"limit_type": "NL10", "session_id": "default"}),
                     "winrate_nl50": get_metric_value(bot_winrate_bb_100, {"limit_type": "NL50", "session_id": "default"}),
@@ -133,7 +133,7 @@ async def broadcast_decision(decision_data: Dict):
     """
     message = {
         "type": "decision",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "data": decision_data
     }
     await manager.broadcast(message)
@@ -148,7 +148,7 @@ async def broadcast_hand_result(hand_data: Dict):
     """
     message = {
         "type": "hand_result",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "data": hand_data
     }
     await manager.broadcast(message)

@@ -46,7 +46,12 @@ check-deps:
 	@echo "✅ Основные зависимости установлены"
 
 test: check-deps
-	python3 -m pytest tests/ -v
+	@echo "Запуск всех тестов..."
+	ENABLE_ADMIN_API=1 TESTING=1 python3 -m pytest tests/ -v
+
+test-edge-cases: check-deps
+	@echo "Запуск edge cases тестов..."
+	ENABLE_ADMIN_API=1 TESTING=1 python3 -m pytest tests/test_edge_cases.py tests/test_coverage_improvements.py -v
 
 test-e2e: check-deps
 	@echo "Запуск E2E теста (требует ENABLE_ADMIN_API=1)..."

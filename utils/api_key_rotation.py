@@ -9,7 +9,7 @@
 
 import argparse
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 # Добавляем путь к проекту
@@ -33,7 +33,7 @@ def rotate_api_key(db: Session, key_id: int) -> dict:
     # Деактивируем старый
     key.is_active = False
     key.meta = key.meta or {}
-    key.meta["rotated_at"] = datetime.utcnow().isoformat()
+    key.meta["rotated_at"] = datetime.now(timezone.utc).isoformat()
     key.meta["rotated_to"] = new_api_key
     
     # Создаём новый ключ
@@ -63,7 +63,7 @@ def rotate_api_key(db: Session, key_id: int) -> dict:
 
 def list_expired_keys(db: Session, days: int = 30) -> list:
     """Список ключей, которые скоро истекают"""
-    cutoff = datetime.utcnow() + timedelta(days=days)
+    cutoff = datetime.now(timezone.utc) + timedelta(days=days)
     expired = db.query(APIKey).filter(
         APIKey.expires_at.isnot(None),
         APIKey.expires_at < cutoff,
@@ -75,7 +75,7 @@ def list_expired_keys(db: Session, days: int = 30) -> list:
             "key_id": k.key_id,
             "client_name": k.client_name,
             "expires_at": k.expires_at.isoformat() if k.expires_at else None,
-            "days_until_expiry": (k.expires_at - datetime.utcnow()).days if k.expires_at else None
+            "days_until_expiry": (k.expires_at - datetime.now(timezone.utc)).days if k.expires_at else None
         }
         for k in expired
     ]

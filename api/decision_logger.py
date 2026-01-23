@@ -1,7 +1,7 @@
 """Логирование решений в БД"""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional
 from sqlalchemy.orm import Session
 
@@ -82,7 +82,7 @@ class DecisionLogger:
                 action_amount=action_amount,
                 reasoning=reasoning,
                 latency_ms=latency_ms,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
 
             db.add(decision_log)

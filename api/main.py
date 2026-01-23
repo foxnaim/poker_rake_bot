@@ -386,19 +386,39 @@ def custom_openapi():
         
         ## Основные endpoints:
         
+        ### Решения и логирование:
         - `POST /api/v1/decide` - Принятие решения ботом
         - `POST /api/v1/log_hand` - Логирование раздачи
         - `GET /api/v1/opponent/{id}` - Профиль оппонента
-        - `GET /api/v1/health` - Health check
+        
+        ### Статистика и мониторинг:
+        - `GET /api/v1/health` - Health check (с проверкой сервисов)
+        - `GET /api/v1/stats` - Общая статистика
         - `GET /metrics` - Prometheus метрики
+        
+        ### Admin API (требует ENABLE_ADMIN_API=1):
+        - `POST /api/v1/admin/bots` - Создание бота
+        - `POST /api/v1/admin/tables` - Создание стола
+        - `POST /api/v1/admin/session/start` - Запуск сессии
+        - `GET /api/v1/admin/audit` - Просмотр аудит-лога
         
         ## Аутентификация:
         
         API ключи передаются через заголовок `X-API-Key` (опционально).
         
+        Для HMAC аутентификации используйте:
+        - `X-API-Key` - API ключ
+        - `X-Signature` - HMAC-SHA256 подпись
+        - `X-Nonce` - Уникальный nonce
+        - `X-Timestamp` - Unix timestamp
+        
         ## Rate Limiting:
         
         По умолчанию: 120 запросов в минуту на IP.
+        
+        ## Примеры использования:
+        
+        См. `docs/API_EXAMPLES.md` для подробных примеров на Python, cURL, JavaScript.
         """,
         routes=app.routes,
     )

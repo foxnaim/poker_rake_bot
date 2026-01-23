@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timezone
 
 from api.schemas import SessionCreate, SessionEnd, SessionResponse, SessionStartResponse, SessionEndResponse, SessionListItem
 from data.database import get_db
@@ -72,7 +72,7 @@ async def start_session(
     session = BotStats(
         session_id=request.session_id,
         limit_type=request.limit_type,
-        period_start=datetime.utcnow(),
+        period_start=datetime.now(timezone.utc),
         period_end=None,  # Будет заполнено при завершении
         hands_played=0,
         vpip=0,
@@ -122,7 +122,7 @@ async def end_session(
         )
 
     # Завершаем сессию
-    session.period_end = datetime.utcnow()
+    session.period_end = datetime.now(timezone.utc)
 
     # Вычисляем статистику из рук за период сессии
     hands = db.query(Hand).filter(
@@ -221,7 +221,7 @@ async def get_session(
 
     # Если сессия активна, обновляем статистику в реальном времени
     if session.period_end is None:
-        period_end = datetime.utcnow()
+        period_end = datetime.now(timezone.utc)
         hands = db.query(Hand).filter(
             Hand.created_at >= session.period_start,
             Hand.created_at <= period_end,

@@ -1,7 +1,7 @@
 """Вычисление статистики бота из раздач"""
 
 from typing import Dict, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 
@@ -172,7 +172,7 @@ class BotStatsCalculator:
                          db: Session) -> Optional[BotStats]:
         """Получает текущую статистику бота"""
         # Статистика за последний час
-        period_end = datetime.utcnow()
+        period_end = datetime.now(timezone.utc)
         period_start = period_end - timedelta(hours=1)
         
         return self.calculate_stats(session_id, limit_type, period_start, period_end, db)

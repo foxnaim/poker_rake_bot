@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import Security, HTTPException, status
 from fastapi.security import APIKeyHeader
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timezone
 
 # API Key header
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
@@ -55,11 +55,11 @@ class APIKeyAuth:
             
             if key:
                 # Проверяем срок действия
-                if key.expires_at and key.expires_at < datetime.utcnow():
+                if key.expires_at and key.expires_at < datetime.now(timezone.utc):
                     return False
                 
                 # Обновляем last_used
-                key.last_used = datetime.utcnow()
+                key.last_used = datetime.now(timezone.utc)
                 db.commit()
                 
                 return True

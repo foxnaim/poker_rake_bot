@@ -1,10 +1,9 @@
 """SQLAlchemy модели для БД"""
 
 from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, JSON, ForeignKey, Text, ARRAY
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
-from datetime import datetime
+from datetime import datetime, timezone
 
 Base = declarative_base()
 
@@ -18,7 +17,7 @@ class Hand(Base):
     table_id = Column(String(100), nullable=False, index=True)
     limit_type = Column(String(20), nullable=False, index=True)
     session_id = Column(Integer, ForeignKey("bot_sessions.id", ondelete="SET NULL"), nullable=True, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
     players_count = Column(Integer, nullable=False)
     hero_position = Column(Integer, nullable=False)
     hero_cards = Column(String(10), nullable=False)
@@ -27,7 +26,7 @@ class Hand(Base):
     rake_amount = Column(Numeric(10, 2), nullable=False)
     hero_result = Column(Numeric(10, 2), nullable=False)
     hand_history = Column(JSON)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
     session = relationship("BotSession", back_populates="hands")
@@ -49,9 +48,9 @@ class OpponentProfile(Base):
     fold_to_cbet_pct = Column(Numeric(5, 2), default=0)
     hands_played = Column(Integer, default=0)
     classification = Column(String(50))
-    last_seen = Column(DateTime, default=datetime.utcnow)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_seen = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class DecisionLog(Base):
@@ -70,7 +69,7 @@ class DecisionLog(Base):
     action_amount = Column(Numeric(10, 2))
     reasoning = Column(JSON)
     latency_ms = Column(Integer)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     
     # Relationships
     session = relationship("BotSession", back_populates="decisions")
@@ -89,7 +88,7 @@ class TrainingCheckpoint(Base):
     metrics = Column(JSON)
     file_path = Column(String(500))
     is_active = Column(Boolean, default=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class BotStats(Base):
@@ -113,7 +112,7 @@ class BotStats(Base):
     profit_bb_100 = Column(Numeric(6, 2), default=0)  # Profit in bb/100
     hands_per_hour = Column(Numeric(6, 2), default=0)  # Hands per hour
     avg_pot_size = Column(Numeric(10, 2), default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 # ============================================

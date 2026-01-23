@@ -12,7 +12,7 @@ import os
 import argparse
 import random
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 # Add project root to path
@@ -174,7 +174,7 @@ def create_api_keys(db):
 def create_sessions(db, bots, tables, configs, count=10):
     """Создать сессии"""
     created = 0
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     for i in range(count):
         bot = random.choice(bots)
@@ -312,7 +312,7 @@ def create_agents(db, bots):
             agent = Agent(
                 agent_id=agent_id,
                 status='offline',
-                last_seen=datetime.utcnow() - timedelta(hours=random.randint(0, 24)),
+                last_seen=datetime.now(timezone.utc) - timedelta(hours=random.randint(0, 24)),
                 version='1.0.0',
                 meta={'os': 'linux', 'bot_alias': bot.alias}
             )

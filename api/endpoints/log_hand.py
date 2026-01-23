@@ -10,7 +10,7 @@ from data.database import get_db
 from api.websocket import broadcast_hand_result
 from brain.opponent_profiler import opponent_profiler
 from utils.rake_calculator import calculate_rake
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 router = APIRouter(prefix="/api/v1", tags=["hands"])
@@ -116,7 +116,7 @@ async def log_hand_endpoint(
             existing.rake_amount = calculated_rake
             existing.hero_result = request.hero_result
             existing.hand_history = request.hand_history
-            existing.timestamp = datetime.utcnow()
+            existing.timestamp = datetime.now(timezone.utc)
             db.commit()
         else:
             hand = Hand(
@@ -132,7 +132,7 @@ async def log_hand_endpoint(
                 rake_amount=calculated_rake,
                 hero_result=request.hero_result,
                 hand_history=request.hand_history,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
             
             db.add(hand)
@@ -262,7 +262,7 @@ async def log_hands_bulk(
                 rake_amount=calculated_rake,
                 hero_result=hand_data.hero_result,
                 hand_history=hand_data.hand_history,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
 
             db.add(hand)
