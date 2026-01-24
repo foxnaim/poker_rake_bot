@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiClient } from '../services/api';
+import api from '../services/axiosConfig';
 import { addResponsiveStyles } from '../utils/responsiveStyles';
 
 // Initialize responsive styles
@@ -29,8 +29,8 @@ const AdminAPIKeysPage: React.FC = () => {
   const loadKeys = async () => {
     try {
       setLoading(true);
-      const data = await apiClient.getApiKeys();
-      setKeys(data || []);
+      const response = await api.get('/api/v1/admin/api-keys');
+      setKeys(response.data || []);
     } catch (error: any) {
       console.error('Error loading keys:', error);
       setKeys([]);
@@ -42,17 +42,17 @@ const AdminAPIKeysPage: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      const permissions = formData.is_admin 
+      const permissions = formData.is_admin
         ? ['admin', ...formData.permissions]
         : formData.permissions;
-      
-      const response = await apiClient.createApiKey({
+
+      const response = await api.post('/api/v1/admin/api-keys', {
         client_name: formData.client_name,
         permissions: permissions,
         rate_limit_per_minute: formData.rate_limit_per_minute
       });
-      
-      alert(`API ключ создан!\n\nAPI ключ: ${response.api_key}\nAPI секрет: ${response.api_secret}\n\nСохраните эти данные!`);
+
+      alert(`API ключ создан!\n\nAPI ключ: ${response.data.api_key}\nAPI секрет: ${response.data.api_secret}\n\nСохраните эти данные!`);
       setShowForm(false);
       setFormData({
         client_name: '',
@@ -69,7 +69,7 @@ const AdminAPIKeysPage: React.FC = () => {
 
   const handleToggle = async (keyId: number, currentActive: boolean) => {
     try {
-      await apiClient.toggleApiKey(keyId);
+      await api.patch(`/api/v1/admin/api-keys/${keyId}/toggle`);
       loadKeys();
     } catch (error) {
       console.error('Error toggling key:', error);
@@ -79,9 +79,9 @@ const AdminAPIKeysPage: React.FC = () => {
 
   const handleDelete = async (keyId: number) => {
     if (!window.confirm('Удалить этот API ключ?')) return;
-    
+
     try {
-      await apiClient.deleteApiKey(keyId);
+      await api.delete(`/api/v1/admin/api-keys/${keyId}`);
       loadKeys();
     } catch (error) {
       console.error('Error deleting key:', error);

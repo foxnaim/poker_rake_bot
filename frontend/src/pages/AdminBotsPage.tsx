@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiClient } from '../services/api';
+import api from '../services/axiosConfig';
 import { addResponsiveStyles } from '../utils/responsiveStyles';
 
 // Initialize responsive styles
@@ -29,8 +29,8 @@ const AdminBotsPage: React.FC = () => {
   const loadBots = async () => {
     try {
       setLoading(true);
-      const data = await apiClient.getBots();
-      setBots(data || []);
+      const response = await api.get('/api/v1/admin/bots');
+      setBots(response.data || []);
     } catch (error: any) {
       console.error('Error loading bots:', error);
       setBots([]);
@@ -42,7 +42,7 @@ const AdminBotsPage: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      await apiClient.createBot(formData);
+      await api.post('/api/v1/admin/bots', formData);
       setShowForm(false);
       setFormData({ alias: '', default_style: 'balanced', default_limit: 'NL10', active: true });
       loadBots();
@@ -54,7 +54,7 @@ const AdminBotsPage: React.FC = () => {
 
   const handleToggleActive = async (botId: number, currentActive: boolean) => {
     try {
-      await apiClient.updateBot(botId, { active: !currentActive });
+      await api.patch(`/api/v1/admin/bots/${botId}`, { active: !currentActive });
       loadBots();
     } catch (error) {
       console.error('Error updating bot:', error);

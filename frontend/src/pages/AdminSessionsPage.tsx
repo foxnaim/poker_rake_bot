@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiClient } from '../services/api';
+import api from '../services/axiosConfig';
 import { addResponsiveStyles } from '../utils/responsiveStyles';
 
 // Initialize responsive styles
@@ -35,9 +35,9 @@ const AdminSessionsPage: React.FC = () => {
     try {
       setLoading(true);
       const [sessionsData, botsData, tablesData] = await Promise.all([
-        apiClient.getRecentSessions(50),
-        apiClient.getBots(),
-        apiClient.getTables()
+        api.get(`/api/v1/admin/sessions/recent?bot_id=${50}`),
+        api.get("/api/v1/admin/bots"),
+        api.get("/api/v1/admin/tables")
       ]);
       setSessions(sessionsData || []);
       setBots(botsData || []);
@@ -55,8 +55,8 @@ const AdminSessionsPage: React.FC = () => {
 
   const loadSessions = async () => {
     try {
-      const data = await apiClient.getRecentSessions(50);
-      setSessions(data || []);
+      const response = await api.get(`/api/v1/admin/sessions/recent?bot_id=${botFilter || ''}`);
+      setSessions(response.data || []);
     } catch (error: any) {
       console.error('Error loading sessions:', error);
       setSessions([]);
@@ -65,7 +65,7 @@ const AdminSessionsPage: React.FC = () => {
 
   const handleStart = async () => {
     try {
-      await apiClient.startSession(formData);
+      await api.post("/api/v1/admin/sessions/start", formData);
       setShowStartForm(false);
       setFormData({ bot_id: 0, table_id: 0, limit: 'NL10', style: '', bot_config_id: null });
       loadSessions();
@@ -77,7 +77,7 @@ const AdminSessionsPage: React.FC = () => {
 
   const handlePause = async (sessionId: string) => {
     try {
-      await apiClient.pauseSession(sessionId);
+      await api.post(`/api/v1/admin/sessions/${sessionId}/pause`);
       loadSessions();
     } catch (error) {
       console.error('Error pausing session:', error);
@@ -87,7 +87,7 @@ const AdminSessionsPage: React.FC = () => {
 
   const handleStop = async (sessionId: string) => {
     try {
-      await apiClient.stopSession(sessionId);
+      await api.post(`/api/v1/admin/sessions/${sessionId}/stop`);
       loadSessions();
     } catch (error) {
       console.error('Error stopping session:', error);

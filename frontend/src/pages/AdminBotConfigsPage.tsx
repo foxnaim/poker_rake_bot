@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiClient } from '../services/api';
+import api from '../services/axiosConfig';
 import { addResponsiveStyles } from '../utils/responsiveStyles';
 
 // Initialize responsive styles
@@ -48,8 +48,8 @@ const AdminBotConfigsPage: React.FC = () => {
     try {
       setLoading(true);
       const [configsData, botsData] = await Promise.all([
-        apiClient.getBotConfigs(),
-        apiClient.getBots()
+        api.get("/api/v1/admin/bot-configs"),
+        api.get("/api/v1/admin/bots")
       ]);
       setConfigs(configsData || []);
       setBots(botsData || []);
@@ -66,8 +66,8 @@ const AdminBotConfigsPage: React.FC = () => {
   const loadConfigs = async () => {
     try {
       const data = botFilter 
-        ? await apiClient.getBotConfigs(botFilter)
-        : await apiClient.getBotConfigs();
+        ? await api.get(`/api/v1/admin/bot-configs?bot_id=${botFilter}`)
+        : await api.get("/api/v1/admin/bot-configs");
       setConfigs(data || []);
     } catch (error: any) {
       console.error('Error loading configs:', error);
@@ -78,7 +78,7 @@ const AdminBotConfigsPage: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      await apiClient.createBotConfig(formData);
+      await api.post("/api/v1/admin/bot-configs", formData);
       setShowForm(false);
       resetForm();
       loadConfigs();
@@ -92,7 +92,7 @@ const AdminBotConfigsPage: React.FC = () => {
     if (!editingConfig) return;
     
     try {
-      await apiClient.updateBotConfig(editingConfig.id, formData);
+      await api.patch(`/api/v1/admin/bot-configs/${editingConfig.id}`, formData);
       setEditingConfig(null);
       resetForm();
       loadConfigs();
@@ -123,7 +123,7 @@ const AdminBotConfigsPage: React.FC = () => {
     if (!window.confirm('Удалить этот конфиг?')) return;
     
     try {
-      await apiClient.deleteBotConfig(configId);
+      await api.delete(`/api/v1/admin/bot-configs/${configId}`);
       loadConfigs();
     } catch (error) {
       console.error('Error deleting config:', error);

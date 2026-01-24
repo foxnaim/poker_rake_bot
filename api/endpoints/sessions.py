@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from api.schemas import SessionCreate, SessionEnd, SessionResponse, SessionStartResponse, SessionEndResponse, SessionListItem
 from data.database import get_db
@@ -132,15 +132,25 @@ async def end_session(
     session.period_end = datetime.now(timezone.utc)
 
     # Конвертируем datetime в naive для корректного сравнения с SQLite
-    period_start_naive = ensure_timezone_aware(session.period_start).replace(tzinfo=None)
+    # Вычитаем 1 секунду для учёта микросекунд (SQLite func.now() не сохраняет микросекунды)
+    period_start_naive = (ensure_timezone_aware(session.period_start) - timedelta(seconds=1)).replace(tzinfo=None)
     period_end_naive = session.period_end.replace(tzinfo=None)
 
+    # Ищем BotSession по session_id для фильтрации рук
+    from data.models import BotSession
+    bot_session = db.query(BotSession).filter(BotSession.session_id == session.session_id).first()
+
     # Вычисляем статистику из рук за период сессии
-    hands = db.query(Hand).filter(
+    query = db.query(Hand).filter(
         Hand.created_at >= period_start_naive,
         Hand.created_at <= period_end_naive,
         Hand.limit_type == session.limit_type
-    ).all()
+    )
+    # Если есть BotSession, фильтруем по session_id для точности
+    if bot_session:
+        query = query.filter(Hand.session_id == bot_session.id)
+
+    hands = query.all()
 
     if hands:
         session.hands_played = len(hands)
@@ -234,12 +244,24 @@ async def get_session(
     if session.period_end is None:
         period_end = datetime.now(timezone.utc)
         # Конвертируем period_start в aware для корректного сравнения
-        period_start_aware = ensure_timezone_aware(session.period_start)
-        hands = db.query(Hand).filter(
+        # Вычитаем 1 секунду для учёта микросекунд (SQLite func.now() не сохраняет микросекунды)
+        period_start_aware = ensure_timezone_aware(session.period_start) - timedelta(seconds=1)
+
+        # Ищем BotSession по session_id для фильтрации рук
+        from data.models import BotSession
+        bot_session = db.query(BotSession).filter(BotSession.session_id == session.session_id).first()
+
+        # Фильтруем руки
+        query = db.query(Hand).filter(
             Hand.created_at >= period_start_aware.replace(tzinfo=None),
             Hand.created_at <= period_end.replace(tzinfo=None),
             Hand.limit_type == session.limit_type
-        ).all()
+        )
+        # Если есть BotSession, фильтруем по session_id для точности
+        if bot_session:
+            query = query.filter(Hand.session_id == bot_session.id)
+
+        hands = query.all()
         
         if hands:
             session.hands_played = len(hands)

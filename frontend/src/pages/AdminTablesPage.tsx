@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiClient } from '../services/api';
+import api from '../services/axiosConfig';
 import { addResponsiveStyles } from '../utils/responsiveStyles';
 
 // Initialize responsive styles
@@ -35,12 +35,12 @@ const AdminTablesPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [tablesData, roomsData] = await Promise.all([
-        apiClient.getTables(),
-        apiClient.getRooms()
+      const [tablesRes, roomsRes] = await Promise.all([
+        api.get("/api/v1/admin/tables"),
+        api.get("/api/v1/admin/rooms")
       ]);
-      setTables(tablesData || []);
-      setRooms(roomsData || []);
+      setTables(tablesRes.data || []);
+      setRooms(roomsRes.data || []);
     } catch (error: any) {
       console.error('Error loading data:', error);
       setTables([]);
@@ -53,10 +53,11 @@ const AdminTablesPage: React.FC = () => {
 
   const loadTables = async () => {
     try {
-      const data = roomFilter 
-        ? await apiClient.getTables(roomFilter)
-        : await apiClient.getTables();
-      setTables(data || []);
+      const url = roomFilter
+        ? `/api/v1/admin/tables?room_id=${roomFilter}`
+        : "/api/v1/admin/tables";
+      const response = await api.get(url);
+      setTables(response.data || []);
     } catch (error: any) {
       console.error('Error loading tables:', error);
       setTables([]);
@@ -66,7 +67,7 @@ const AdminTablesPage: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      await apiClient.createTable(formData);
+      await api.post("/api/v1/admin/tables", formData);
       setShowForm(false);
       setFormData({ room_id: 0, limit_type: 'NL10', max_players: 6, meta: null });
       loadTables();
@@ -78,9 +79,9 @@ const AdminTablesPage: React.FC = () => {
 
   const handleDelete = async (tableId: number) => {
     if (!window.confirm('Удалить этот стол?')) return;
-    
+
     try {
-      await apiClient.deleteTable(tableId);
+      await api.delete(`/api/v1/admin/tables/${tableId}`);
       loadTables();
     } catch (error) {
       console.error('Error deleting table:', error);

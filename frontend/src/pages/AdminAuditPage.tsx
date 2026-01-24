@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiClient } from '../services/api';
+import api from '../services/axiosConfig';
 import { addResponsiveStyles } from '../utils/responsiveStyles';
 
 // Initialize responsive styles
@@ -53,8 +53,8 @@ const AdminAuditPage: React.FC = () => {
     try {
       setLoading(true);
       const [entriesData, summaryData] = await Promise.all([
-        apiClient.getAuditLog(filters.limit, filters.action || undefined, filters.entity_type || undefined),
-        apiClient.getAuditSummary()
+        api.get(`/api/v1/admin/audit?limit=${filters.limit}${(filters.action || undefined ? `&action=${filters.action || undefined}` : "")}${(filters.entity_type || undefined ? `&entity_type=${filters.entity_type || undefined}` : "")}`),
+        api.get("/api/v1/admin/audit/summary")
       ]);
       setEntries(entriesData || []);
       setSummary(summaryData || null);

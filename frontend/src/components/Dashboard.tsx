@@ -46,10 +46,14 @@ interface ChartData {
 
 function getLiveWsUrl(): string | null {
   if (typeof window === 'undefined' || typeof WebSocket === 'undefined') return null;
+
+  // В production (Docker) используем текущий хост
+  // В development (localhost:3000) используем напрямую порт 8000
   const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const host = window.location.hostname || 'localhost';
-  // API is exposed on 8000 in docker-compose and local dev.
-  return `${proto}://${host}:8000/ws/live`;
+  const port = window.location.port === '3000' ? '8000' : window.location.port;
+
+  return port ? `${proto}://${host}:${port}/ws/live` : `${proto}://${host}/ws/live`;
 }
 
 const Dashboard: React.FC = () => {

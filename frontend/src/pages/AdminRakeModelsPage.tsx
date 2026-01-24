@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiClient } from '../services/api';
+import api from '../services/axiosConfig';
 import { addResponsiveStyles } from '../utils/responsiveStyles';
 
 // Initialize responsive styles
@@ -39,8 +39,8 @@ const AdminRakeModelsPage: React.FC = () => {
     try {
       setLoading(true);
       const [modelsData, roomsData] = await Promise.all([
-        apiClient.getRakeModels(),
-        apiClient.getRooms()
+        api.get("/api/v1/admin/rake-models"),
+        api.get("/api/v1/admin/rooms")
       ]);
       setModels(modelsData || []);
       setRooms(roomsData || []);
@@ -57,8 +57,8 @@ const AdminRakeModelsPage: React.FC = () => {
   const loadModels = async () => {
     try {
       const data = roomFilter 
-        ? await apiClient.getRakeModels(roomFilter)
-        : await apiClient.getRakeModels();
+        ? await api.get(`/api/v1/admin/rake-models?room_id=${roomFilter}`)
+        : await api.get("/api/v1/admin/rake-models");
       setModels(data || []);
     } catch (error: any) {
       console.error('Error loading models:', error);
@@ -69,7 +69,7 @@ const AdminRakeModelsPage: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      await apiClient.createRakeModel(formData);
+      await api.post("/api/v1/admin/rake-models", formData);
       setShowForm(false);
       resetForm();
       loadModels();
@@ -83,7 +83,7 @@ const AdminRakeModelsPage: React.FC = () => {
     if (!editingModel) return;
     
     try {
-      await apiClient.updateRakeModel(editingModel.id, formData);
+      await api.patch(`/api/v1/admin/rake-models/${editingModel.id}`, formData);
       setEditingModel(null);
       resetForm();
       loadModels();
@@ -110,7 +110,7 @@ const AdminRakeModelsPage: React.FC = () => {
     if (!window.confirm('Удалить эту модель рейка?')) return;
     
     try {
-      await apiClient.deleteRakeModel(modelId);
+      await api.delete(`/api/v1/admin/rake-models/${modelId}`);
       loadModels();
     } catch (error) {
       console.error('Error deleting model:', error);

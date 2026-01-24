@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiClient } from '../services/api';
+import api from '../services/axiosConfig';
 import { addResponsiveStyles } from '../utils/responsiveStyles';
 
 // Initialize responsive styles
@@ -29,7 +29,8 @@ const AdminRoomsPage: React.FC = () => {
   const loadRooms = async () => {
     try {
       setLoading(true);
-      const data = await apiClient.getRooms();
+      const response = await api.get('/api/v1/admin/rooms');
+      const data = response.data;
       setRooms(data || []);
     } catch (error: any) {
       console.error('Error loading rooms:', error);
@@ -42,7 +43,7 @@ const AdminRoomsPage: React.FC = () => {
 
   const handleOnboard = async () => {
     try {
-      await apiClient.onboardRoom({
+      await api.post('/api/v1/admin/rooms', {
         room_link: formData.room_link,
         type: formData.type,
         meta: formData.meta
