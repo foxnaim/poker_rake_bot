@@ -18,6 +18,7 @@ os.environ["ENABLE_ADMIN_API"] = "1"
 os.environ["TESTING"] = "1"
 
 import pytest
+import secrets
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
@@ -310,11 +311,15 @@ class TestEdgeCasesDatabase:
 
     def test_session_start_duplicate_bot(self, client: TestClient, db: Session, admin_key: str):
         """Попытка запустить две сессии для одного бота"""
+        unique_suffix = secrets.token_hex(4)
         # Создаём бота и стол
-        bot = Bot(alias="test_bot", default_style="neutral", default_limit="NL10", active=True)
-        room = Room(room_link="test_room", type="pokerking", status="active")
+        bot = Bot(alias=f"test_bot_dup_{unique_suffix}", default_style="balanced", default_limit="NL10", active=True)
+        room = Room(room_link=f"test_room_dup_{unique_suffix}", type="pokerking", status="active")
+        db.add_all([bot, room])
+        db.commit()
+
         table = Table(room_id=room.id, limit_type="NL10", max_players=6)
-        db.add_all([bot, room, table])
+        db.add(table)
         db.commit()
 
         headers = {"X-API-Key": admin_key}
@@ -345,18 +350,22 @@ class TestEdgeCasesDatabase:
 
     def test_table_key_resolution(self, client: TestClient, db: Session):
         """Проверка разрешения table_key в table_id"""
+        unique_suffix = secrets.token_hex(4)
         # Создаём стол с external_table_id
-        room = Room(room_link="test_room", type="pokerking", status="active")
-        table = Table(room_id=room.id, external_table_id="test_table_key", limit_type="NL10", max_players=6)
-        db.add_all([room, table])
+        room = Room(room_link=f"test_room_key_{unique_suffix}", type="pokerking", status="active")
+        db.add(room)
+        db.commit()
+
+        table = Table(room_id=room.id, external_table_id=f"test_table_key_{unique_suffix}", limit_type="NL10", max_players=6)
+        db.add(table)
         db.commit()
 
         # Запрос с table_key должен найти стол
         response = client.post(
             "/api/v1/decide",
             json={
-                "hand_id": "test_1",
-                "table_id": "test_table_key",  # Используем table_key
+                "hand_id": f"test_1_{unique_suffix}",
+                "table_id": f"test_table_key_{unique_suffix}",  # Используем table_key
                 "limit_type": "NL10",
                 "street": "preflop",
                 "hero_position": 0,

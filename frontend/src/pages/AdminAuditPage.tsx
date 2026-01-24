@@ -4,6 +4,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
+import { addResponsiveStyles } from '../utils/responsiveStyles';
+
+// Initialize responsive styles
+if (typeof document !== 'undefined') {
+  addResponsiveStyles();
+}
 
 interface AuditEntry {
   id: number;
@@ -50,10 +56,12 @@ const AdminAuditPage: React.FC = () => {
         apiClient.getAuditLog(filters.limit, filters.action || undefined, filters.entity_type || undefined),
         apiClient.getAuditSummary()
       ]);
-      setEntries(entriesData);
-      setSummary(summaryData);
-    } catch (error) {
+      setEntries(entriesData || []);
+      setSummary(summaryData || null);
+    } catch (error: any) {
       console.error('Error loading audit data:', error);
+      setEntries([]);
+      setSummary(null);
       alert('Ошибка загрузки данных аудита');
     } finally {
       setLoading(false);
@@ -106,17 +114,17 @@ const AdminAuditPage: React.FC = () => {
   }
 
   return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
+    <div style={containerStyle} className="admin-page-container">
+      <div style={headerStyle} className="admin-page-header">
         <h1 style={{ color: '#66FCF1', margin: 0 }}>Журнал аудита</h1>
-        <button onClick={loadData} style={buttonStyle}>
+        <button onClick={loadData} style={buttonStyle} className="admin-audit-button">
           Обновить
         </button>
       </div>
 
       {/* Summary Cards */}
       {summary && (
-        <div style={summaryGridStyle}>
+        <div style={summaryGridStyle} className="admin-stats-grid">
           <div style={summaryCardStyle}>
             <div style={{ fontSize: '32px', color: '#66FCF1', fontWeight: 'bold' }}>
               {summary.total_entries}
@@ -150,6 +158,7 @@ const AdminAuditPage: React.FC = () => {
           value={filters.action}
           onChange={(e) => setFilters({ ...filters, action: e.target.value })}
           style={inputStyle}
+          className="admin-input"
         >
           <option value="">Все действия</option>
           <option value="create">Создать</option>
@@ -177,6 +186,7 @@ const AdminAuditPage: React.FC = () => {
           value={filters.limit}
           onChange={(e) => setFilters({ ...filters, limit: parseInt(e.target.value) })}
           style={inputStyle}
+          className="admin-input"
         >
           <option value={50}>50 записей</option>
           <option value={100}>100 записей</option>
@@ -189,7 +199,7 @@ const AdminAuditPage: React.FC = () => {
       </div>
 
       {/* Entries List */}
-      <div style={tableContainerStyle}>
+      <div style={tableContainerStyle} className="admin-table-wrapper">
         <table style={tableStyle}>
           <thead>
             <tr>
@@ -253,8 +263,10 @@ const AdminAuditPage: React.FC = () => {
                     style={{
                       ...buttonStyle,
                       padding: '4px 12px',
-                      fontSize: '12px'
+                      fontSize: '12px',
+                      width: 'auto'
                     }}
+                    className="admin-audit-button"
                   >
                     Подробнее
                   </button>
@@ -268,18 +280,19 @@ const AdminAuditPage: React.FC = () => {
       {/* Detail Modal */}
       {selectedEntry && (
         <div style={modalOverlayStyle} onClick={() => setSelectedEntry(null)}>
-          <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+          <div style={modalStyle} className="admin-modal" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 style={{ color: '#66FCF1', margin: 0 }}>Детали записи #{selectedEntry.id}</h2>
               <button
                 onClick={() => setSelectedEntry(null)}
-                style={{ ...buttonStyle, background: '#C5C6C7' }}
+                style={{ ...buttonStyle, background: '#C5C6C7', width: 'auto' }}
+                className="admin-audit-button"
               >
                 Закрыть
               </button>
             </div>
 
-            <div style={detailGridStyle}>
+            <div style={detailGridStyle} className="admin-detail-grid">
               <div style={detailItemStyle}>
                 <label style={detailLabelStyle}>Время:</label>
                 <span>{formatDate(selectedEntry.created_at)}</span>
@@ -334,16 +347,19 @@ const AdminAuditPage: React.FC = () => {
 };
 
 const containerStyle: React.CSSProperties = {
-  padding: '20px',
+  padding: '12px',
   maxWidth: '1400px',
-  margin: '0 auto'
+  margin: '0 auto',
+  width: '100%'
 };
 
 const headerStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '30px'
+  alignItems: 'flex-start',
+  gap: '12px',
+  marginBottom: '24px'
 };
 
 const buttonStyle: React.CSSProperties = {
@@ -359,9 +375,9 @@ const buttonStyle: React.CSSProperties = {
 
 const summaryGridStyle: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(4, 1fr)',
-  gap: '20px',
-  marginBottom: '30px'
+  gridTemplateColumns: 'repeat(2, 1fr)',
+  gap: '12px',
+  marginBottom: '24px'
 };
 
 const summaryCardStyle: React.CSSProperties = {
@@ -374,13 +390,14 @@ const summaryCardStyle: React.CSSProperties = {
 
 const filterStyle: React.CSSProperties = {
   display: 'flex',
-  gap: '15px',
+  flexDirection: 'column',
+  gap: '12px',
   marginBottom: '20px',
   background: '#1F2833',
-  padding: '20px',
+  padding: '16px',
   borderRadius: '8px',
   border: '1px solid #C5C6C7',
-  alignItems: 'center'
+  alignItems: 'stretch'
 };
 
 const inputStyle: React.CSSProperties = {
@@ -390,14 +407,16 @@ const inputStyle: React.CSSProperties = {
   borderRadius: '4px',
   color: '#FFFFFF',
   fontSize: '14px',
-  minWidth: '150px'
+  minWidth: '150px',
+  width: '100%'
 };
 
 const tableContainerStyle: React.CSSProperties = {
   background: '#1F2833',
   borderRadius: '8px',
   border: '1px solid #C5C6C7',
-  overflow: 'hidden'
+  overflow: 'hidden',
+  overflowX: 'auto'
 };
 
 const tableStyle: React.CSSProperties = {

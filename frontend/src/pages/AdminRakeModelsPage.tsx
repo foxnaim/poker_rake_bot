@@ -4,6 +4,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
+import { addResponsiveStyles } from '../utils/responsiveStyles';
+
+// Initialize responsive styles
+if (typeof document !== 'undefined') {
+  addResponsiveStyles();
+}
 
 const AdminRakeModelsPage: React.FC = () => {
   const [models, setModels] = useState<any[]>([]);
@@ -36,10 +42,12 @@ const AdminRakeModelsPage: React.FC = () => {
         apiClient.getRakeModels(),
         apiClient.getRooms()
       ]);
-      setModels(modelsData);
-      setRooms(roomsData);
-    } catch (error) {
+      setModels(modelsData || []);
+      setRooms(roomsData || []);
+    } catch (error: any) {
       console.error('Error loading data:', error);
+      setModels([]);
+      setRooms([]);
       alert('Ошибка загрузки данных');
     } finally {
       setLoading(false);
@@ -51,9 +59,10 @@ const AdminRakeModelsPage: React.FC = () => {
       const data = roomFilter 
         ? await apiClient.getRakeModels(roomFilter)
         : await apiClient.getRakeModels();
-      setModels(data);
-    } catch (error) {
+      setModels(data || []);
+    } catch (error: any) {
       console.error('Error loading models:', error);
+      setModels([]);
       alert('Ошибка загрузки моделей');
     }
   };
@@ -129,24 +138,25 @@ const AdminRakeModelsPage: React.FC = () => {
   }
 
   return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
+    <div style={containerStyle} className="admin-page-container">
+      <div style={headerStyle} className="admin-page-header">
         <h1 style={{ color: '#66FCF1', margin: 0 }}>Управление моделями рейка</h1>
         <button onClick={() => {
           setShowForm(!showForm);
           setEditingModel(null);
           resetForm();
-        }} style={buttonStyle}>
+        }} style={buttonStyle} className="admin-button">
           {showForm ? 'Отмена' : '+ Создать модель'}
         </button>
       </div>
 
-      <div style={filtersStyle}>
+      <div style={filtersStyle} className="admin-form-row">
         <label style={{ color: '#C5C6C7', marginRight: '10px' }}>Фильтр по комнате:</label>
         <select
           value={roomFilter || ''}
           onChange={(e) => setRoomFilter(e.target.value ? parseInt(e.target.value) : null)}
           style={selectStyle}
+          className="admin-input admin-select-filter"
         >
           <option value="">Все комнаты</option>
           {rooms.map(room => (
@@ -166,6 +176,7 @@ const AdminRakeModelsPage: React.FC = () => {
             value={formData.room_id || ''}
             onChange={(e) => setFormData({ ...formData, room_id: e.target.value ? parseInt(e.target.value) : null })}
             style={inputStyle}
+            className="admin-input"
             disabled={!!editingModel}
           >
             <option value="">Все комнаты (NULL)</option>
@@ -179,6 +190,7 @@ const AdminRakeModelsPage: React.FC = () => {
             value={formData.limit_type || ''}
             onChange={(e) => setFormData({ ...formData, limit_type: e.target.value || null })}
             style={inputStyle}
+            className="admin-input"
           >
             <option value="">Все лимиты (NULL)</option>
             <option value="NL10">NL10</option>
@@ -188,7 +200,7 @@ const AdminRakeModelsPage: React.FC = () => {
             <option value="NL200">NL200</option>
           </select>
           <div style={rowStyle}>
-            <div style={colStyle}>
+            <div style={colStyle} className="admin-form-col">
               <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Процент рейка (%)</label>
               <input
                 type="number"
@@ -196,9 +208,10 @@ const AdminRakeModelsPage: React.FC = () => {
                 value={formData.percent}
                 onChange={(e) => setFormData({ ...formData, percent: parseFloat(e.target.value) })}
                 style={inputStyle}
+                className="admin-input"
               />
             </div>
-            <div style={colStyle}>
+            <div style={colStyle} className="admin-form-col">
               <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Макс. рейк (Cap)</label>
               <input
                 type="number"
@@ -207,9 +220,10 @@ const AdminRakeModelsPage: React.FC = () => {
                 value={formData.cap || ''}
                 onChange={(e) => setFormData({ ...formData, cap: e.target.value ? parseFloat(e.target.value) : null })}
                 style={inputStyle}
+                className="admin-input"
               />
             </div>
-            <div style={colStyle}>
+            <div style={colStyle} className="admin-form-col">
               <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Мин. банк</label>
               <input
                 type="number"
@@ -217,24 +231,26 @@ const AdminRakeModelsPage: React.FC = () => {
                 value={formData.min_pot}
                 onChange={(e) => setFormData({ ...formData, min_pot: parseFloat(e.target.value) })}
                 style={inputStyle}
+                className="admin-input"
               />
             </div>
           </div>
           <button 
             onClick={editingModel ? handleUpdate : handleCreate} 
             style={buttonStyle}
+            className="admin-button"
           >
             {editingModel ? 'Сохранить' : 'Создать'}
           </button>
         </div>
       )}
 
-      <div style={listStyle}>
+      <div style={listStyle} className="admin-list-grid">
         {filteredModels.map((model) => {
           const room = rooms.find(r => r.id === model.room_id);
           return (
-            <div key={model.id} style={cardStyle}>
-              <div style={cardHeaderStyle}>
+            <div key={model.id} style={cardStyle} className="admin-card">
+              <div style={cardHeaderStyle} className="admin-card-header">
                 <div>
                   <span style={{ color: '#66FCF1', fontWeight: 'bold', fontSize: '18px' }}>
                     {model.room_id ? (room?.type || `Комната ${model.room_id}`) : 'Глобальная'}
@@ -244,13 +260,15 @@ const AdminRakeModelsPage: React.FC = () => {
                 <div>
                   <button
                     onClick={() => handleEdit(model)}
-                    style={{...buttonStyle, fontSize: '12px', padding: '6px 12px', marginRight: '8px'}}
+                    style={{...buttonStyle, fontSize: '12px', padding: '6px 12px', marginRight: '8px', width: 'auto'}}
+                    className="admin-button"
                   >
                     Редактировать
                   </button>
                   <button
                     onClick={() => handleDelete(model.id)}
-                    style={{...buttonStyle, background: '#ff4444', fontSize: '12px', padding: '6px 12px'}}
+                    style={{...buttonStyle, background: '#ff4444', fontSize: '12px', padding: '6px 12px', width: 'auto'}}
+                    className="admin-button"
                   >
                     Удалить
                   </button>
@@ -280,16 +298,19 @@ const AdminRakeModelsPage: React.FC = () => {
 };
 
 const containerStyle: React.CSSProperties = {
-  padding: '20px',
+  padding: '12px',
   maxWidth: '1200px',
-  margin: '0 auto'
+  margin: '0 auto',
+  width: '100%'
 };
 
 const headerStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '30px'
+  alignItems: 'flex-start',
+  gap: '12px',
+  marginBottom: '24px'
 };
 
 const filtersStyle: React.CSSProperties = {
@@ -297,7 +318,11 @@ const filtersStyle: React.CSSProperties = {
   padding: '15px',
   background: '#1F2833',
   borderRadius: '8px',
-  border: '1px solid #C5C6C7'
+  border: '1px solid #C5C6C7',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+  alignItems: 'stretch'
 };
 
 const selectStyle: React.CSSProperties = {
@@ -307,7 +332,8 @@ const selectStyle: React.CSSProperties = {
   borderRadius: '4px',
   color: '#FFFFFF',
   fontSize: '14px',
-  minWidth: '300px'
+  minWidth: '100%',
+  width: '100%'
 };
 
 const buttonStyle: React.CSSProperties = {
@@ -318,8 +344,26 @@ const buttonStyle: React.CSSProperties = {
   borderRadius: '4px',
   cursor: 'pointer',
   fontWeight: 'bold',
-  fontSize: '14px'
+  fontSize: '14px',
+  width: '100%'
 };
+
+// Add responsive button group
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .admin-button-group {
+        flex-direction: row !important;
+        width: auto !important;
+      }
+      .admin-button-group .admin-button {
+        width: auto !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 const formStyle: React.CSSProperties = {
   background: '#1F2833',
@@ -340,20 +384,48 @@ const inputStyle: React.CSSProperties = {
   fontSize: '14px'
 };
 
+// Add responsive font size for mobile
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (max-width: 639px) {
+      .admin-input {
+        font-size: 16px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 const rowStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   gap: '10px',
   marginBottom: '10px'
 };
 
 const colStyle: React.CSSProperties = {
-  flex: 1
+  flex: 1,
+  width: '100%'
 };
+
+// Add responsive styles
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .admin-form-row {
+        flex-direction: row !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 const listStyle: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-  gap: '20px'
+  gridTemplateColumns: '1fr',
+  gap: '16px'
 };
 
 const cardStyle: React.CSSProperties = {
@@ -365,9 +437,32 @@ const cardStyle: React.CSSProperties = {
 
 const cardHeaderStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
   alignItems: 'flex-start',
+  gap: '12px',
   marginBottom: '10px'
 };
+
+// Add responsive styles
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .admin-card-header {
+        flex-direction: row !important;
+        align-items: flex-start !important;
+      }
+      .admin-button-group {
+        flex-direction: row !important;
+        width: auto !important;
+      }
+      .admin-button-group .admin-button {
+        width: auto !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default AdminRakeModelsPage;

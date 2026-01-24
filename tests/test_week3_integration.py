@@ -3,11 +3,12 @@
 import pytest
 pytest.importorskip("fastapi")
 import asyncio
+import secrets
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from data.database import get_db, init_db
-from data.models import Agent, BotStats, Hand, RakeModel, Room, Table
+from data.models import Agent, Bot, BotSession, BotStats, Hand, RakeModel, Room, Table
 from api.endpoints.agents import agent_heartbeat_http
 from api.endpoints.sessions import start_session, end_session, get_session
 from api.endpoints.log_hand import log_hand_endpoint
@@ -32,8 +33,9 @@ def db_session():
 @pytest.fixture
 def test_room_and_table(db_session: Session):
     """Создаёт тестовую комнату и стол"""
+    unique_suffix = secrets.token_hex(4)
     room = Room(
-        room_link="test_room",
+        room_link=f"test_room_{unique_suffix}",
         type="test",
         status="active"
     )
@@ -144,24 +146,26 @@ class TestAgentProtocol:
 
 class TestSessionStats:
     """Тесты статистики сессий"""
-    
+
     @pytest.mark.asyncio
     async def test_session_start_end_with_stats(self, db_session: Session):
         """Тест создания и завершения сессии со статистикой"""
+        unique_suffix = secrets.token_hex(4)
+        session_id = f"test_session_{unique_suffix}"
         # Создаём сессию
         create_request = SessionCreate(
-            session_id="test_session_1",
+            session_id=session_id,
             limit_type="NL10"
         )
         start_response = await start_session(create_request, db_session)
-        
+
         assert start_response["status"] == "started"
-        assert start_response["session_id"] == "test_session_1"
-        
+        assert start_response["session_id"] == session_id
+
         # Логируем несколько рук
         for i in range(5):
             hand_request = HandLogRequest(
-                hand_id=f"hand_{i}",
+                hand_id=f"hand_{unique_suffix}_{i}",
                 table_id="table_1",
                 limit_type="NL10",
                 players_count=6,
@@ -169,22 +173,22 @@ class TestSessionStats:
                 hero_cards="AsKh",
                 board_cards="",
                 pot_size=20.0,
-                rake_amount=None,  # Будет вычислено
+                rake_amount=0.0,  # Будет вычислено автоматически
                 hero_result=5.0,
                 hand_history=None
             )
             await log_hand_endpoint(hand_request, db_session, True)
         
         # Завершаем сессию
-        end_request = SessionEnd(session_id="test_session_1")
+        end_request = SessionEnd(session_id=session_id)
         end_response = await end_session(end_request, db_session)
-        
+
         assert end_response["status"] == "ended"
         assert end_response["hands_played"] == 5
         assert end_response["total_rake"] > 0
-        
+
         # Проверяем статистику
-        session_response = await get_session("test_session_1", db_session)
+        session_response = await get_session(session_id, db_session)
         assert session_response.hands_played == 5
         assert session_response.rake_100 > 0
         assert session_response.hands_per_hour > 0
@@ -193,40 +197,68 @@ class TestSessionStats:
 
 class TestFullCycle:
     """Тест полного цикла: агент → сессия → решения → статистика"""
-    
+
     @pytest.mark.asyncio
     async def test_full_agent_cycle(self, db_session: Session):
         """Тест полного цикла работы агента"""
+        unique_suffix = secrets.token_hex(4)
+        agent_id = f"full_cycle_agent_{unique_suffix}"
+        session_id = f"full_cycle_session_{unique_suffix}"
+
         # 1. Агент отправляет heartbeat
         heartbeat_request = AgentHeartbeatRequest(
-            agent_id="full_cycle_agent",
+            agent_id=agent_id,
             status="online",
             version="1.0.0"
         )
         heartbeat_response = await agent_heartbeat_http(heartbeat_request, db_session)
         assert heartbeat_response.status == "ok"
-        
-        # 2. Начинаем сессию
+
+        # 2. Создаём BotSession (агент ищет именно BotSession, не BotStats)
+        # Для BotSession нужен Bot и Table
+        room = Room(room_link=f"cycle_room_{unique_suffix}", type="test", status="active")
+        db_session.add(room)
+        db_session.commit()
+
+        table = Table(room_id=room.id, limit_type="NL10", max_players=6)
+        db_session.add(table)
+        db_session.commit()
+
+        bot = Bot(alias=f"cycle_bot_{unique_suffix}", default_style="balanced", default_limit="NL10")
+        db_session.add(bot)
+        db_session.commit()
+
+        bot_session = BotSession(
+            session_id=session_id,
+            bot_id=bot.id,
+            table_id=table.id,
+            status="running"
+        )
+        db_session.add(bot_session)
+        db_session.commit()
+
+        # Также создаём BotStats для статистики сессии
         session_request = SessionCreate(
-            session_id="full_cycle_session",
+            session_id=session_id,
             limit_type="NL10"
         )
         session_start = await start_session(session_request, db_session)
         assert session_start["status"] == "started"
-        
+
         # 3. Агент обновляет heartbeat с session_id
-        heartbeat_request.session_id = "full_cycle_session"
+        heartbeat_request.session_id = session_id
         heartbeat_response = await agent_heartbeat_http(heartbeat_request, db_session)
-        
+
         # Проверяем, что агент привязан к сессии
-        agent = db_session.query(Agent).filter(Agent.agent_id == "full_cycle_agent").first()
+        agent = db_session.query(Agent).filter(Agent.agent_id == agent_id).first()
         assert agent.assigned_session_id is not None
+        assert agent.assigned_session_id == bot_session.id
         
         # 4. Генерируем решения и логируем руки
         for i in range(3):
             # Решение
             decide_request = GameStateRequest(
-                hand_id=f"cycle_hand_{i}",
+                hand_id=f"cycle_hand_{unique_suffix}_{i}",
                 table_id="table_1",
                 limit_type="NL10",
                 street="preflop",
@@ -249,7 +281,7 @@ class TestFullCycle:
             
             # Логируем руку
             hand_request = HandLogRequest(
-                hand_id=f"cycle_hand_{i}",
+                hand_id=f"cycle_hand_{unique_suffix}_{i}",
                 table_id="table_1",
                 limit_type="NL10",
                 players_count=6,
@@ -257,21 +289,21 @@ class TestFullCycle:
                 hero_cards="AsKh",
                 board_cards="",
                 pot_size=20.0,
-                rake_amount=None,
+                rake_amount=0.0,  # Автоматически вычисляется
                 hero_result=2.0,
                 hand_history=None
             )
             await log_hand_endpoint(hand_request, db_session, True)
         
         # 5. Проверяем статистику сессии
-        session_stats = await get_session("full_cycle_session", db_session)
+        session_stats = await get_session(session_id, db_session)
         assert session_stats.hands_played == 3
         assert session_stats.total_rake > 0
         assert session_stats.rake_100 > 0
         assert session_stats.hands_per_hour > 0
-        
+
         # 6. Завершаем сессию
-        end_request = SessionEnd(session_id="full_cycle_session")
+        end_request = SessionEnd(session_id=session_id)
         end_response = await end_session(end_request, db_session)
         assert end_response["status"] == "ended"
 

@@ -60,10 +60,23 @@ const MetricBar: React.FC<MetricBarProps> = ({ label, value, max, unit }) => {
 
 const cardStyle: React.CSSProperties = {
   background: '#1F2833',
-  padding: '20px',
+  padding: '16px',
   borderRadius: '8px',
   border: '1px solid #C5C6C7'
 };
+
+// Add responsive padding
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 768px) {
+      .metrics-chart {
+        padding: 20px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 const titleStyle: React.CSSProperties = {
   color: '#66FCF1',

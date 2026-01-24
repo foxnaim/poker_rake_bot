@@ -1,8 +1,9 @@
 """Endpoints для статистики и аналитики"""
 
-from fastapi import APIRouter, Depends, Query
+import logging
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, text
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 
@@ -15,6 +16,8 @@ from api.schemas import (
     WinrateStatsResponse
 )
 from data.database import get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["stats"])
 
@@ -63,69 +66,178 @@ async def get_stats(
     - Количество активных чекпоинтов
     - Uptime
     """
-    from data.models import Hand, DecisionLog, OpponentProfile, BotStats, BotSession
+    # Безопасный импорт моделей с обработкой ошибок
+    try:
+        from data.models import Hand, DecisionLog, OpponentProfile, BotStats, BotSession, TrainingCheckpoint
+    except ImportError as e:
+        logger.error(f"Error importing models: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Database models not available: {str(e)}")
+    
+    try:
+        # Безопасные запросы с обработкой ошибок для каждой таблицы
+        # Каждый запрос обернут в try/except, чтобы отсутствие таблиц не ломало весь endpoint
+        total_hands = 0
+        try:
+            total_hands = db.query(func.count(Hand.id)).scalar() or 0
+        except Exception as e:
+            try:
+                db.rollback()
+            except:
+                pass
+            logger.warning(f"Error counting hands: {e}", exc_info=True)
+        
+        total_decisions = 0
+        try:
+            total_decisions = db.query(func.count(DecisionLog.id)).scalar() or 0
+        except Exception as e:
+            try:
+                db.rollback()
+            except:
+                pass
+            logger.warning(f"Error counting decisions: {e}", exc_info=True)
+        
+        total_opponents = 0
+        try:
+            total_opponents = db.query(func.count(OpponentProfile.id)).scalar() or 0
+        except Exception as e:
+            try:
+                db.rollback()
+            except:
+                pass
+            logger.warning(f"Error counting opponents: {e}", exc_info=True)
 
-    total_hands = db.query(func.count(Hand.id)).scalar() or 0
-    total_decisions = db.query(func.count(DecisionLog.id)).scalar() or 0
-    total_opponents = db.query(func.count(OpponentProfile.id)).scalar() or 0
+        # Сессии:
+        # - control-plane (bot_sessions) — основной контур
+        total_control_sessions = 0
+        active_control_sessions = 0
+        try:
+            total_control_sessions = db.query(func.count(BotSession.id)).scalar() or 0
+            active_control_sessions = db.query(func.count(BotSession.id)).filter(
+                BotSession.status.in_(["starting", "running", "paused"])
+            ).scalar() or 0
+        except Exception as e:
+            try:
+                db.rollback()
+            except:
+                pass
+            logger.warning(f"Error counting BotSession: {e}", exc_info=True)
+        
+        # - legacy (bot_stats) — оставляем для совместимости/диагностики
+        total_legacy_sessions = 0
+        active_legacy_sessions = 0
+        try:
+            total_legacy_sessions = db.query(func.count(BotStats.id)).scalar() or 0
+            active_legacy_sessions = db.query(func.count(BotStats.id)).filter(BotStats.period_end.is_(None)).scalar() or 0
+        except Exception as e:
+            try:
+                db.rollback()
+            except:
+                pass
+            logger.warning(f"Error counting BotStats: {e}", exc_info=True)
 
-    # Сессии:
-    # - control-plane (bot_sessions) — основной контур
-    total_control_sessions = db.query(func.count(BotSession.id)).scalar() or 0
-    active_control_sessions = db.query(func.count(BotSession.id)).filter(
-        BotSession.status.in_(["starting", "running", "paused"])
-    ).scalar() or 0
-    # - legacy (bot_stats) — оставляем для совместимости/диагностики
-    total_legacy_sessions = db.query(func.count(BotStats.id)).scalar() or 0
-    active_legacy_sessions = db.query(func.count(BotStats.id)).filter(BotStats.period_end.is_(None)).scalar() or 0
+        # Для обратной совместимости поля total_sessions/active_sessions считаем по control-plane
+        total_sessions = total_control_sessions
+        active_sessions = active_control_sessions
 
-    # Для обратной совместимости поля total_sessions/active_sessions считаем по control-plane
-    total_sessions = total_control_sessions
-    active_sessions = active_control_sessions
+        # Финансовые агрегаты (из hands)
+        total_profit = 0.0
+        try:
+            total_profit = db.query(func.sum(Hand.hero_result)).scalar()
+            total_profit = float(total_profit) if total_profit is not None else 0.0
+        except Exception as e:
+            try:
+                db.rollback()
+            except:
+                pass
+            logger.warning(f"Error calculating total_profit: {e}", exc_info=True)
 
-    # Финансовые агрегаты (из hands)
-    total_profit = db.query(func.sum(Hand.hero_result)).scalar()
-    total_profit = float(total_profit) if total_profit is not None else 0.0
+        total_rake = 0.0
+        try:
+            total_rake = db.query(func.sum(Hand.rake_amount)).scalar()
+            total_rake = float(total_rake) if total_rake is not None else 0.0
+        except Exception as e:
+            try:
+                db.rollback()
+            except:
+                pass
+            logger.warning(f"Error calculating total_rake: {e}", exc_info=True)
 
-    total_rake = db.query(func.sum(Hand.rake_amount)).scalar()
-    total_rake = float(total_rake) if total_rake is not None else 0.0
+        # Упрощенный winrate (bb/100), считаем BB=1.0 как в текущем коде сессий
+        winrate_bb_100 = 0.0
+        if total_hands > 0:
+            winrate_bb_100 = (total_profit / total_hands) * 100.0
 
-    # Упрощенный winrate (bb/100), считаем BB=1.0 как в текущем коде сессий
-    winrate_bb_100 = 0.0
-    if total_hands > 0:
-        winrate_bb_100 = (total_profit / total_hands) * 100.0
+        # Активные чекпоинты
+        active_checkpoints = 0
+        try:
+            active_checkpoints = db.query(func.count(TrainingCheckpoint.id)).filter(
+                TrainingCheckpoint.is_active == True
+            ).scalar() or 0
+        except Exception as e:
+            try:
+                db.rollback()
+            except:
+                pass
+            logger.warning(f"Error counting TrainingCheckpoint: {e}", exc_info=True)
 
-    # Активные чекпоинты
-    from data.models import TrainingCheckpoint
-    active_checkpoints = db.query(func.count(TrainingCheckpoint.id)).filter(
-        TrainingCheckpoint.is_active == True
-    ).scalar() or 0
+        # Последняя раздача
+        last_hand_time = None
+        try:
+            # Используем прямой SQL запрос, чтобы избежать проблем с отсутствующими столбцами в модели
+            result = db.execute(text("SELECT created_at FROM hands ORDER BY created_at DESC LIMIT 1"))
+            row = result.first()
+            if row and row[0]:
+                last_hand_time = row[0]
+                # Handle timezone-naive datetimes from SQLite
+                if isinstance(last_hand_time, datetime) and last_hand_time.tzinfo is None:
+                    last_hand_time = last_hand_time.replace(tzinfo=timezone.utc)
+        except Exception as e:
+            # Log but don't fail, rollback transaction if needed
+            try:
+                db.rollback()
+            except:
+                pass
+            logger.warning(f"Error getting last_hand_time: {e}", exc_info=True)
 
-    # Последняя раздача
-    last_hand = db.query(Hand).order_by(desc(Hand.created_at)).first()
-    last_hand_time = last_hand.created_at if last_hand else None
+        # Последнее решение
+        last_decision_time = None
+        try:
+            # Используем прямой SQL запрос, чтобы избежать проблем с отсутствующими столбцами в модели
+            result = db.execute(text("SELECT timestamp FROM decision_log ORDER BY timestamp DESC LIMIT 1"))
+            row = result.first()
+            if row and row[0]:
+                last_decision_time = row[0]
+                # Handle timezone-naive datetimes from SQLite
+                if isinstance(last_decision_time, datetime) and last_decision_time.tzinfo is None:
+                    last_decision_time = last_decision_time.replace(tzinfo=timezone.utc)
+        except Exception as e:
+            # Log but don't fail, rollback transaction if needed
+            try:
+                db.rollback()
+            except:
+                pass
+            logger.warning(f"Error getting last_decision_time: {e}", exc_info=True)
 
-    # Последнее решение
-    last_decision = db.query(DecisionLog).order_by(desc(DecisionLog.timestamp)).first()
-    last_decision_time = last_decision.timestamp if last_decision else None
-
-    return StatsResponse(
-        total_hands=total_hands,
-        total_decisions=total_decisions,
-        total_sessions=total_sessions,
-        active_sessions=active_sessions,
-        total_control_sessions=total_control_sessions,
-        active_control_sessions=active_control_sessions,
-        total_legacy_sessions=total_legacy_sessions,
-        active_legacy_sessions=active_legacy_sessions,
-        total_opponents=total_opponents,
-        active_checkpoints=active_checkpoints,
-        total_profit=total_profit,
-        total_rake=total_rake,
-        winrate_bb_100=winrate_bb_100,
-        last_hand_time=last_hand_time,
-        last_decision_time=last_decision_time
-    )
+        return StatsResponse(
+            total_hands=total_hands,
+            total_decisions=total_decisions,
+            total_sessions=total_sessions,
+            active_sessions=active_sessions,
+            total_control_sessions=total_control_sessions,
+            active_control_sessions=active_control_sessions,
+            total_legacy_sessions=total_legacy_sessions,
+            active_legacy_sessions=active_legacy_sessions,
+            total_opponents=total_opponents,
+            active_checkpoints=active_checkpoints,
+            total_profit=total_profit,
+            total_rake=total_rake,
+            winrate_bb_100=winrate_bb_100,
+            last_hand_time=last_hand_time,
+            last_decision_time=last_decision_time
+        )
+    except Exception as e:
+        logger.error(f"Error in get_stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/checkpoints", response_model=List[CheckpointResponse])

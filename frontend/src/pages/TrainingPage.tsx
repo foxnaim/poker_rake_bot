@@ -3,7 +3,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from '../services/axiosConfig';
+import { addResponsiveStyles } from '../utils/responsiveStyles';
+
+// Initialize responsive styles
+if (typeof document !== 'undefined') {
+  addResponsiveStyles();
+}
 
 interface TrainingStatus {
   is_running: boolean;
@@ -43,18 +49,20 @@ const TrainingPage: React.FC = () => {
   const fetchStatus = async () => {
     try {
       const response = await axios.get('/api/v1/training/status');
-      setStatus(response.data);
-    } catch (error) {
+      setStatus(response.data || null);
+    } catch (error: any) {
       console.error('Error fetching training status:', error);
+      setStatus(null);
     }
   };
 
   const fetchCheckpoints = async () => {
     try {
       const response = await axios.get('/api/v1/checkpoints');
-      setCheckpoints(response.data);
-    } catch (error) {
+      setCheckpoints(response.data || []);
+    } catch (error: any) {
       console.error('Error fetching checkpoints:', error);
+      setCheckpoints([]);
     }
   };
 
@@ -106,7 +114,7 @@ const TrainingPage: React.FC = () => {
   }
 
   return (
-    <div style={pageStyle}>
+    <div style={pageStyle} className="user-page-container">
       <div style={headerStyle}>
         <h1 style={{ margin: 0 }}>Обучение MCCFR</h1>
       </div>
@@ -125,7 +133,7 @@ const TrainingPage: React.FC = () => {
               <div style={progressBarBgStyle}>
                 <div style={{...progressBarStyle, width: `${status.total_iterations ? ((status.current_iteration || 0) / status.total_iterations * 100) : 0}%`}}></div>
               </div>
-              <div style={progressStatsStyle}>
+              <div style={progressStatsStyle} className="training-progress-stats">
                 <span>Итерация: {formatNumber(status.current_iteration || 0)} / {formatNumber(status.total_iterations || 0)}</span>
                 <span>Начато: {status.start_time ? new Date(status.start_time).toLocaleTimeString('ru-RU') : '-'}</span>
                 <span>Осталось: {status.estimated_completion ? new Date(status.estimated_completion).toLocaleTimeString('ru-RU') : '-'}</span>
@@ -136,13 +144,14 @@ const TrainingPage: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div style={startFormStyle}>
+          <div style={startFormStyle} className="training-start-form">
             <div style={formGroupStyle}>
               <label style={labelStyle}>Формат:</label>
               <select
                 value={selectedFormat}
                 onChange={(e) => setSelectedFormat(e.target.value)}
                 style={selectStyle}
+                className="admin-input"
               >
                 {['NL2', 'NL5', 'NL10', 'NL25', 'NL50', 'NL100'].map(f => (
                   <option key={f} value={f}>{f}</option>
@@ -156,12 +165,13 @@ const TrainingPage: React.FC = () => {
                 value={iterations}
                 onChange={(e) => setIterations(Number(e.target.value))}
                 style={inputStyle}
+                className="admin-input"
                 min={1000}
                 max={10000000}
                 step={10000}
               />
             </div>
-            <button onClick={startTraining} style={startButtonStyle}>
+            <button onClick={startTraining} style={startButtonStyle} className="admin-button">
               Запустить обучение
             </button>
           </div>
@@ -169,9 +179,9 @@ const TrainingPage: React.FC = () => {
       </div>
 
       {/* Checkpoints */}
-      <div style={checkpointsCardStyle}>
+      <div style={checkpointsCardStyle} className="training-checkpoints">
         <h3 style={{ margin: '0 0 20px 0', color: '#66FCF1' }}>Чекпоинты</h3>
-        <div style={checkpointsGridStyle}>
+        <div style={checkpointsGridStyle} className="admin-list-grid">
           {checkpoints.map((cp) => (
             <div key={cp.checkpoint_id} style={{
               ...checkpointCardStyle,
@@ -195,6 +205,7 @@ const TrainingPage: React.FC = () => {
                 <button
                   onClick={() => activateCheckpoint(cp.checkpoint_id)}
                   style={activateButtonStyle}
+                  className="admin-button"
                 >
                   Активировать
                 </button>
@@ -210,24 +221,116 @@ const TrainingPage: React.FC = () => {
   );
 };
 
-const pageStyle: React.CSSProperties = { padding: '20px' };
+const pageStyle: React.CSSProperties = { padding: '12px' };
 const loadingStyle: React.CSSProperties = { textAlign: 'center', padding: '50px', color: '#C5C6C7' };
-const headerStyle: React.CSSProperties = { marginBottom: '30px', padding: '20px', background: '#1F2833', borderRadius: '8px' };
-const controlsCardStyle: React.CSSProperties = { background: '#1F2833', borderRadius: '8px', padding: '25px', marginBottom: '30px' };
+const headerStyle: React.CSSProperties = { marginBottom: '24px', padding: '16px', background: '#1F2833', borderRadius: '8px' };
+const controlsCardStyle: React.CSSProperties = { background: '#1F2833', borderRadius: '8px', padding: '20px', marginBottom: '24px' };
+
+// Add responsive padding
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .training-header {
+        padding: 20px !important;
+        margin-bottom: 28px !important;
+      }
+      .training-controls {
+        padding: 24px !important;
+        margin-bottom: 28px !important;
+      }
+    }
+    @media (min-width: 768px) {
+      .training-header {
+        padding: 20px !important;
+        margin-bottom: 30px !important;
+      }
+      .training-controls {
+        padding: 25px !important;
+        margin-bottom: 30px !important;
+      }
+    }
+    @media (min-width: 640px) {
+      .training-start-form {
+        flex-direction: row !important;
+        align-items: flex-end !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 const progressContainerStyle: React.CSSProperties = { marginBottom: '20px' };
 const progressHeaderStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#C5C6C7' };
 const progressBarBgStyle: React.CSSProperties = { background: '#0B0C10', borderRadius: '10px', height: '20px', overflow: 'hidden' };
 const progressBarStyle: React.CSSProperties = { background: 'linear-gradient(90deg, #45A29E, #66FCF1)', height: '100%', borderRadius: '10px', transition: 'width 0.5s' };
 const progressStatsStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', marginTop: '10px', color: '#C5C6C7', fontSize: '14px' };
-const startFormStyle: React.CSSProperties = { display: 'flex', gap: '20px', alignItems: 'flex-end' };
+const startFormStyle: React.CSSProperties = { 
+  display: 'flex', 
+  flexDirection: 'column',
+  gap: '16px', 
+  alignItems: 'stretch' 
+};
 const formGroupStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '8px' };
 const labelStyle: React.CSSProperties = { color: '#C5C6C7', fontSize: '14px' };
-const selectStyle: React.CSSProperties = { padding: '10px 15px', background: '#0B0C10', border: '1px solid #45A29E', borderRadius: '4px', color: '#FFFFFF', fontSize: '16px' };
-const inputStyle: React.CSSProperties = { padding: '10px 15px', background: '#0B0C10', border: '1px solid #45A29E', borderRadius: '4px', color: '#FFFFFF', fontSize: '16px', width: '150px' };
-const startButtonStyle: React.CSSProperties = { padding: '12px 30px', background: '#45A29E', border: 'none', borderRadius: '4px', color: '#FFFFFF', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' };
-const stopButtonStyle: React.CSSProperties = { padding: '12px 30px', background: '#F44336', border: 'none', borderRadius: '4px', color: '#FFFFFF', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' };
-const checkpointsCardStyle: React.CSSProperties = { background: '#1F2833', borderRadius: '8px', padding: '25px' };
-const checkpointsGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' };
+const selectStyle: React.CSSProperties = { 
+  padding: '10px 15px', 
+  background: '#0B0C10', 
+  border: '1px solid #45A29E', 
+  borderRadius: '4px', 
+  color: '#FFFFFF', 
+  fontSize: '16px',
+  width: '100%'
+};
+const inputStyle: React.CSSProperties = { 
+  padding: '10px 15px', 
+  background: '#0B0C10', 
+  border: '1px solid #45A29E', 
+  borderRadius: '4px', 
+  color: '#FFFFFF', 
+  fontSize: '16px', 
+  width: '100%'
+};
+const startButtonStyle: React.CSSProperties = { 
+  padding: '12px 30px', 
+  background: '#45A29E', 
+  border: 'none', 
+  borderRadius: '4px', 
+  color: '#FFFFFF', 
+  cursor: 'pointer', 
+  fontWeight: 'bold', 
+  fontSize: '16px',
+  width: '100%'
+};
+const stopButtonStyle: React.CSSProperties = { 
+  padding: '12px 30px', 
+  background: '#F44336', 
+  border: 'none', 
+  borderRadius: '4px', 
+  color: '#FFFFFF', 
+  cursor: 'pointer', 
+  fontWeight: 'bold', 
+  fontSize: '16px',
+  width: '100%'
+};
+const checkpointsCardStyle: React.CSSProperties = { 
+  background: '#1F2833', 
+  borderRadius: '8px', 
+  padding: '20px' 
+};
+
+// Add responsive padding
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 768px) {
+      .training-checkpoints {
+        padding: 25px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+const checkpointsGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr', gap: '16px' };
 const checkpointCardStyle: React.CSSProperties = { background: '#0B0C10', borderRadius: '8px', padding: '20px' };
 const checkpointHeaderStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' };
 const formatBadgeStyle: React.CSSProperties = { background: '#45A29E', padding: '4px 12px', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold' };

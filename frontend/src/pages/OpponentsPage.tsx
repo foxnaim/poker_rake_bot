@@ -3,7 +3,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from '../services/axiosConfig';
+import { addResponsiveStyles } from '../utils/responsiveStyles';
+
+// Initialize responsive styles
+if (typeof document !== 'undefined') {
+  addResponsiveStyles();
+}
 
 interface OpponentProfile {
   opponent_id: string;
@@ -33,9 +39,10 @@ const OpponentsPage: React.FC = () => {
       }
       
       const response = await axios.get('/api/v1/opponents', { params });
-      setOpponents(response.data);
-    } catch (error) {
+      setOpponents(response.data || []);
+    } catch (error: any) {
       console.error('Error fetching opponents:', error);
+      setOpponents([]);
     } finally {
       setLoading(false);
     }
@@ -70,8 +77,8 @@ const OpponentsPage: React.FC = () => {
   }
 
   return (
-    <div style={pageStyle}>
-      <div style={headerStyle}>
+    <div style={pageStyle} className="user-page-container">
+      <div style={headerStyle} className="user-page-header">
         <h1 style={{ margin: 0 }}>👥 Профили оппонентов</h1>
         <div style={filterGroupStyle}>
           {['all', 'fish', 'nit', 'tag', 'lag', 'calling_station'].map(f => (
@@ -89,7 +96,7 @@ const OpponentsPage: React.FC = () => {
         </div>
       </div>
 
-      <div style={statsCardStyle}>
+      <div style={statsCardStyle} className="opponents-stats">
         <div style={statItemStyle}>
           <span style={statLabelStyle}>Всего профилей</span>
           <span style={statValueStyle}>{opponents.length}</span>
@@ -102,7 +109,7 @@ const OpponentsPage: React.FC = () => {
         </div>
       </div>
 
-      <div style={tableContainerStyle}>
+      <div style={tableContainerStyle} className="user-table-wrapper opponents-table-wrapper">
         <table style={tableStyle}>
           <thead>
             <tr style={tableHeaderStyle}>
@@ -149,22 +156,26 @@ const OpponentsPage: React.FC = () => {
 
 // Styles
 const pageStyle: React.CSSProperties = {
-  padding: '20px'
+  padding: '12px'
 };
 
 const headerStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '30px',
-  padding: '20px',
+  alignItems: 'flex-start',
+  gap: '12px',
+  marginBottom: '24px',
+  padding: '16px',
   background: '#1F2833',
   borderRadius: '8px'
 };
 
 const filterGroupStyle: React.CSSProperties = {
   display: 'flex',
-  gap: '10px'
+  flexWrap: 'wrap',
+  gap: '8px',
+  width: '100%'
 };
 
 const filterButtonStyle: React.CSSProperties = {
@@ -185,9 +196,24 @@ const activeFilterStyle: React.CSSProperties = {
 
 const statsCardStyle: React.CSSProperties = {
   display: 'flex',
-  gap: '20px',
+  flexDirection: 'column',
+  gap: '16px',
   marginBottom: '20px'
 };
+
+// Add responsive stats
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .opponents-stats {
+        flex-direction: row !important;
+        gap: 20px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 const statItemStyle: React.CSSProperties = {
   flex: 1,
@@ -213,7 +239,8 @@ const statValueStyle: React.CSSProperties = {
 const tableContainerStyle: React.CSSProperties = {
   background: '#1F2833',
   borderRadius: '8px',
-  overflow: 'hidden'
+  overflow: 'hidden',
+  overflowX: 'auto'
 };
 
 const tableStyle: React.CSSProperties = {

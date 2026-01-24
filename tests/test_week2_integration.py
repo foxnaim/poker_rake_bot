@@ -3,7 +3,12 @@
 Тестирует полный flow: room → table → bot → config → session
 """
 
+import os
+os.environ["ENABLE_ADMIN_API"] = "1"
+os.environ["TESTING"] = "1"
+
 import pytest
+import secrets
 from sqlalchemy.orm import Session
 fastapi = pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
@@ -56,12 +61,13 @@ class TestWeek2Integration:
     def test_full_flow(self, client: TestClient, admin_key: str, db: Session):
         """Полный flow: создать room → table → bot → config → session"""
         headers = {"X-API-Key": admin_key}
-        
+        unique_suffix = secrets.token_hex(4)
+
         # 1. Создать комнату
         room_response = client.post(
             "/api/v1/admin/rooms/onboard",
             json={
-                "room_link": "https://test-room.com",
+                "room_link": f"https://test-room-{unique_suffix}.com",
                 "type": "pokerstars",
                 "meta": {"test": True}
             },
@@ -88,7 +94,7 @@ class TestWeek2Integration:
         bot_response = client.post(
             "/api/v1/admin/bots",
             json={
-                "alias": "test_bot",
+                "alias": f"test_bot_{unique_suffix}",
                 "default_style": "balanced",
                 "default_limit": "NL10",
                 "active": True
@@ -189,22 +195,23 @@ class TestWeek2Integration:
     def test_session_id_binding(self, client: TestClient, admin_key: str, db: Session):
         """Проверяет привязку hands и decision_log к session_id"""
         headers = {"X-API-Key": admin_key}
-        
+        unique_suffix = secrets.token_hex(4)
+
         # Создаем минимальный setup
-        room = Room(room_link="test", type="test", status="active")
+        room = Room(room_link=f"test_binding_{unique_suffix}", type="test", status="active")
         db.add(room)
         db.commit()
-        
+
         table = Table(room_id=room.id, limit_type="NL10", max_players=6)
         db.add(table)
         db.commit()
-        
-        bot = Bot(alias="test", default_style="balanced", default_limit="NL10")
+
+        bot = Bot(alias=f"test_binding_{unique_suffix}", default_style="balanced", default_limit="NL10")
         db.add(bot)
         db.commit()
-        
+
         session = BotSession(
-            session_id="test_session_123",
+            session_id=f"test_session_{unique_suffix}",
             bot_id=bot.id,
             table_id=table.id,
             status="running"
@@ -216,9 +223,10 @@ class TestWeek2Integration:
         from data.models import Hand, DecisionLog
         
         # Создаем тестовую hand с session_id
+        test_hand_id = f"test_hand_{unique_suffix}"
         hand = Hand(
-            hand_id="test_hand_1",
-            table_id="test_table",
+            hand_id=test_hand_id,
+            table_id=f"test_table_{unique_suffix}",
             limit_type="NL10",
             session_id=session.id,
             players_count=2,
@@ -230,16 +238,17 @@ class TestWeek2Integration:
         )
         db.add(hand)
         db.commit()
-        
+
         # Проверяем привязку
-        saved_hand = db.query(Hand).filter(Hand.hand_id == "test_hand_1").first()
+        saved_hand = db.query(Hand).filter(Hand.hand_id == test_hand_id).first()
         assert saved_hand is not None
         assert saved_hand.session_id == session.id
         
         # Создаем тестовый decision_log с session_id
+        test_decision_id = f"test_decision_{unique_suffix}"
         decision = DecisionLog(
-            hand_id="test_hand_1",
-            decision_id="test_decision_1",
+            hand_id=test_hand_id,
+            decision_id=test_decision_id,
             session_id=session.id,
             street="preflop",
             game_state={},
@@ -247,20 +256,22 @@ class TestWeek2Integration:
         )
         db.add(decision)
         db.commit()
-        
+
         # Проверяем привязку
-        saved_decision = db.query(DecisionLog).filter(DecisionLog.decision_id == "test_decision_1").first()
+        saved_decision = db.query(DecisionLog).filter(DecisionLog.decision_id == test_decision_id).first()
         assert saved_decision is not None
         assert saved_decision.session_id == session.id
     
     def test_crud_operations(self, client: TestClient, admin_key: str):
         """Тестирует CRUD операции для всех сущностей"""
+        import secrets
+        unique_suffix = secrets.token_hex(4)
         headers = {"X-API-Key": admin_key}
-        
+
         # Bots CRUD
         bot_create = client.post(
             "/api/v1/admin/bots",
-            json={"alias": "crud_test", "default_style": "tight", "default_limit": "NL25"},
+            json={"alias": f"crud_test_{unique_suffix}", "default_style": "tight", "default_limit": "NL25"},
             headers=headers
         )
         assert bot_create.status_code == 201
@@ -268,7 +279,7 @@ class TestWeek2Integration:
         
         bot_get = client.get(f"/api/v1/admin/bots/{bot_id}", headers=headers)
         assert bot_get.status_code == 200
-        assert bot_get.json()["alias"] == "crud_test"
+        assert bot_get.json()["alias"] == f"crud_test_{unique_suffix}"
         
         bot_update = client.patch(
             f"/api/v1/admin/bots/{bot_id}",
@@ -281,7 +292,7 @@ class TestWeek2Integration:
         # Rooms CRUD
         room_create = client.post(
             "/api/v1/admin/rooms",
-            json={"room_link": "https://crud-test.com", "type": "ggpoker"},
+            json={"room_link": f"https://crud-test-{unique_suffix}.com", "type": "ggpoker"},
             headers=headers
         )
         assert room_create.status_code == 201
@@ -294,7 +305,7 @@ class TestWeek2Integration:
         # Tables CRUD
         table_create = client.post(
             "/api/v1/admin/tables",
-            json={"room_id": room_id, "limit_type": "NL50", "max_players": 9},
+            json={"room_id": room_id, "limit_type": "NL50", "max_players": 6},
             headers=headers
         )
         assert table_create.status_code == 201
@@ -307,8 +318,8 @@ class TestWeek2Integration:
     def test_admin_permissions(self, client: TestClient, db: Session):
         """Тестирует проверку admin прав"""
         from data.models_v1_2 import APIKey
-        import secrets
-        
+        unique_suffix = secrets.token_hex(4)
+
         # Создаем обычный ключ (не admin)
         regular_key = f"test_regular_{secrets.token_urlsafe(16)}"
         key = APIKey(
@@ -325,7 +336,7 @@ class TestWeek2Integration:
         # Пытаемся создать бота с обычным ключом (должно быть 403)
         response = client.post(
             "/api/v1/admin/bots",
-            json={"alias": "test", "default_style": "balanced", "default_limit": "NL10"},
+            json={"alias": f"test_{unique_suffix}", "default_style": "balanced", "default_limit": "NL10"},
             headers={"X-API-Key": regular_key}
         )
         assert response.status_code == 403
@@ -346,7 +357,7 @@ class TestWeek2Integration:
         # С admin ключом должно работать
         response = client.post(
             "/api/v1/admin/bots",
-            json={"alias": "test_admin", "default_style": "balanced", "default_limit": "NL10"},
+            json={"alias": f"test_admin_{unique_suffix}", "default_style": "balanced", "default_limit": "NL10"},
             headers={"X-API-Key": admin_key}
         )
         assert response.status_code == 201

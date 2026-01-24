@@ -4,6 +4,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
+import { addResponsiveStyles } from '../utils/responsiveStyles';
+
+// Initialize responsive styles
+if (typeof document !== 'undefined') {
+  addResponsiveStyles();
+}
 
 const AdminSessionsPage: React.FC = () => {
   const [sessions, setSessions] = useState<any[]>([]);
@@ -33,11 +39,14 @@ const AdminSessionsPage: React.FC = () => {
         apiClient.getBots(),
         apiClient.getTables()
       ]);
-      setSessions(sessionsData);
-      setBots(botsData);
-      setTables(tablesData);
-    } catch (error) {
+      setSessions(sessionsData || []);
+      setBots(botsData || []);
+      setTables(tablesData || []);
+    } catch (error: any) {
       console.error('Error loading data:', error);
+      setSessions([]);
+      setBots([]);
+      setTables([]);
       alert('Ошибка загрузки данных');
     } finally {
       setLoading(false);
@@ -47,9 +56,10 @@ const AdminSessionsPage: React.FC = () => {
   const loadSessions = async () => {
     try {
       const data = await apiClient.getRecentSessions(50);
-      setSessions(data);
-    } catch (error) {
+      setSessions(data || []);
+    } catch (error: any) {
       console.error('Error loading sessions:', error);
+      setSessions([]);
     }
   };
 
@@ -100,10 +110,10 @@ const AdminSessionsPage: React.FC = () => {
   }
 
   return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
+    <div style={containerStyle} className="admin-page-container">
+      <div style={headerStyle} className="admin-page-header">
         <h1 style={{ color: '#66FCF1', margin: 0 }}>Управление сессиями</h1>
-        <button onClick={() => setShowStartForm(!showStartForm)} style={buttonStyle}>
+        <button onClick={() => setShowStartForm(!showStartForm)} style={buttonStyle} className="admin-button">
           {showStartForm ? 'Отмена' : '+ Запустить сессию'}
         </button>
       </div>
@@ -115,6 +125,7 @@ const AdminSessionsPage: React.FC = () => {
             value={formData.bot_id}
             onChange={(e) => setFormData({ ...formData, bot_id: parseInt(e.target.value) })}
             style={inputStyle}
+            className="admin-input"
           >
             <option value={0}>Выберите бота</option>
             {bots.filter(b => b.active).map(bot => (
@@ -125,6 +136,7 @@ const AdminSessionsPage: React.FC = () => {
             value={formData.table_id}
             onChange={(e) => setFormData({ ...formData, table_id: parseInt(e.target.value) })}
             style={inputStyle}
+            className="admin-input"
           >
             <option value={0}>Выберите стол</option>
             {tables.map(table => (
@@ -139,17 +151,18 @@ const AdminSessionsPage: React.FC = () => {
             value={formData.limit}
             onChange={(e) => setFormData({ ...formData, limit: e.target.value })}
             style={inputStyle}
+            className="admin-input"
           />
-          <button onClick={handleStart} style={buttonStyle} disabled={!formData.bot_id || !formData.table_id}>
+          <button onClick={handleStart} style={buttonStyle} className="admin-button" disabled={!formData.bot_id || !formData.table_id}>
             Запустить
           </button>
         </div>
       )}
 
-      <div style={listStyle}>
+      <div style={listStyle} className="admin-list-grid">
         {sessions.map((session) => (
-          <div key={session.id} style={cardStyle}>
-            <div style={cardHeaderStyle}>
+            <div key={session.id} style={cardStyle} className="admin-card">
+              <div style={cardHeaderStyle} className="admin-card-header admin-session-card-header">
               <span style={{ color: '#66FCF1', fontWeight: 'bold' }}>{session.session_id}</span>
               <span style={{
                 background: getStatusColor(session.status),
@@ -174,19 +187,19 @@ const AdminSessionsPage: React.FC = () => {
                 </div>
               )}
             </div>
-            <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
+            <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }} className="admin-button-group">
               {session.status === 'running' && (
-                <button onClick={() => handlePause(session.session_id)} style={buttonStyle}>
+                <button onClick={() => handlePause(session.session_id)} style={buttonStyle} className="admin-button">
                   Пауза
                 </button>
               )}
               {session.status === 'paused' && (
-                <button onClick={() => handleStop(session.session_id)} style={buttonStyle}>
+                <button onClick={() => handleStop(session.session_id)} style={buttonStyle} className="admin-button">
                   Остановить
                 </button>
               )}
               {session.status !== 'stopped' && (
-                <button onClick={() => handleStop(session.session_id)} style={{...buttonStyle, background: '#ff4444'}}>
+                <button onClick={() => handleStop(session.session_id)} style={{...buttonStyle, background: '#ff4444'}} className="admin-button">
                   Стоп
                 </button>
               )}
@@ -199,16 +212,19 @@ const AdminSessionsPage: React.FC = () => {
 };
 
 const containerStyle: React.CSSProperties = {
-  padding: '20px',
+  padding: '12px',
   maxWidth: '1400px',
-  margin: '0 auto'
+  margin: '0 auto',
+  width: '100%'
 };
 
 const headerStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '30px'
+  alignItems: 'flex-start',
+  gap: '12px',
+  marginBottom: '24px'
 };
 
 const buttonStyle: React.CSSProperties = {
@@ -219,8 +235,25 @@ const buttonStyle: React.CSSProperties = {
   borderRadius: '4px',
   cursor: 'pointer',
   fontWeight: 'bold',
-  fontSize: '14px'
+  fontSize: '14px',
+  width: '100%'
 };
+
+// Add responsive button group
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .admin-button-group {
+        flex-direction: row !important;
+      }
+      .admin-button-group .admin-button {
+        width: auto !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 const formStyle: React.CSSProperties = {
   background: '#1F2833',
@@ -241,10 +274,23 @@ const inputStyle: React.CSSProperties = {
   fontSize: '14px'
 };
 
+// Add responsive font size for mobile
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (max-width: 639px) {
+      .admin-input {
+        font-size: 16px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 const listStyle: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-  gap: '20px'
+  gridTemplateColumns: '1fr',
+  gap: '16px'
 };
 
 const cardStyle: React.CSSProperties = {
@@ -256,8 +302,10 @@ const cardStyle: React.CSSProperties = {
 
 const cardHeaderStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
-  alignItems: 'center',
+  alignItems: 'flex-start',
+  gap: '12px',
   marginBottom: '10px'
 };
 

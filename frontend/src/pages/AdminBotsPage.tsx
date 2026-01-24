@@ -4,6 +4,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
+import { addResponsiveStyles } from '../utils/responsiveStyles';
+
+// Initialize responsive styles
+if (typeof document !== 'undefined') {
+  addResponsiveStyles();
+}
 
 const AdminBotsPage: React.FC = () => {
   const [bots, setBots] = useState<any[]>([]);
@@ -24,9 +30,10 @@ const AdminBotsPage: React.FC = () => {
     try {
       setLoading(true);
       const data = await apiClient.getBots();
-      setBots(data);
-    } catch (error) {
+      setBots(data || []);
+    } catch (error: any) {
       console.error('Error loading bots:', error);
+      setBots([]);
       alert('Ошибка загрузки ботов');
     } finally {
       setLoading(false);
@@ -60,10 +67,10 @@ const AdminBotsPage: React.FC = () => {
   }
 
   return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
+    <div style={containerStyle} className="admin-page-container">
+      <div style={headerStyle} className="admin-page-header">
         <h1 style={{ color: '#66FCF1', margin: 0 }}>Управление ботами</h1>
-        <button onClick={() => setShowForm(!showForm)} style={buttonStyle}>
+        <button onClick={() => setShowForm(!showForm)} style={buttonStyle} className="admin-button">
           {showForm ? 'Отмена' : '+ Добавить бота'}
         </button>
       </div>
@@ -77,11 +84,13 @@ const AdminBotsPage: React.FC = () => {
             value={formData.alias}
             onChange={(e) => setFormData({ ...formData, alias: e.target.value })}
             style={inputStyle}
+            className="admin-input"
           />
           <select
             value={formData.default_style}
             onChange={(e) => setFormData({ ...formData, default_style: e.target.value })}
             style={inputStyle}
+            className="admin-input"
           >
             <option value="tight">Тайтовый</option>
             <option value="balanced">Сбалансированный</option>
@@ -92,22 +101,23 @@ const AdminBotsPage: React.FC = () => {
             value={formData.default_limit}
             onChange={(e) => setFormData({ ...formData, default_limit: e.target.value })}
             style={inputStyle}
+            className="admin-input"
           >
             <option value="NL10">NL10</option>
             <option value="NL25">NL25</option>
             <option value="NL50">NL50</option>
             <option value="NL100">NL100</option>
           </select>
-          <button onClick={handleCreate} style={buttonStyle}>
+          <button onClick={handleCreate} style={buttonStyle} className="admin-button">
             Создать
           </button>
         </div>
       )}
 
-      <div style={listStyle}>
+      <div style={listStyle} className="admin-list-grid">
         {bots.map((bot) => (
-          <div key={bot.id} style={cardStyle}>
-            <div style={cardHeaderStyle}>
+          <div key={bot.id} style={cardStyle} className="admin-card">
+            <div style={cardHeaderStyle} className="admin-card-header">
               <span style={{ color: '#66FCF1', fontWeight: 'bold', fontSize: '18px' }}>{bot.alias}</span>
               <button
                 onClick={() => handleToggleActive(bot.id, bot.active)}
@@ -115,8 +125,10 @@ const AdminBotsPage: React.FC = () => {
                   ...buttonStyle,
                   background: bot.active ? '#45A29E' : '#C5C6C7',
                   fontSize: '12px',
-                  padding: '6px 12px'
+                  padding: '6px 12px',
+                  width: 'auto'
                 }}
+                className="admin-button"
               >
                 {bot.active ? 'Активен' : 'Неактивен'}
               </button>
@@ -133,16 +145,19 @@ const AdminBotsPage: React.FC = () => {
 };
 
 const containerStyle: React.CSSProperties = {
-  padding: '20px',
+  padding: '12px',
   maxWidth: '1200px',
-  margin: '0 auto'
+  margin: '0 auto',
+  width: '100%'
 };
 
 const headerStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '30px'
+  alignItems: 'flex-start',
+  gap: '12px',
+  marginBottom: '24px'
 };
 
 const buttonStyle: React.CSSProperties = {
@@ -153,7 +168,8 @@ const buttonStyle: React.CSSProperties = {
   borderRadius: '4px',
   cursor: 'pointer',
   fontWeight: 'bold',
-  fontSize: '14px'
+  fontSize: '14px',
+  width: '100%'
 };
 
 const formStyle: React.CSSProperties = {
@@ -175,10 +191,23 @@ const inputStyle: React.CSSProperties = {
   fontSize: '14px'
 };
 
+// Add responsive font size for mobile
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (max-width: 639px) {
+      .admin-input {
+        font-size: 16px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 const listStyle: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-  gap: '20px'
+  gridTemplateColumns: '1fr',
+  gap: '16px'
 };
 
 const cardStyle: React.CSSProperties = {
@@ -190,9 +219,25 @@ const cardStyle: React.CSSProperties = {
 
 const cardHeaderStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
-  alignItems: 'center',
+  alignItems: 'flex-start',
+  gap: '12px',
   marginBottom: '10px'
 };
+
+// Add responsive styles
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .admin-card-header {
+        flex-direction: row !important;
+        align-items: center !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default AdminBotsPage;

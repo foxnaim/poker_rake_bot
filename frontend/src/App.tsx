@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, createBrowserRouter } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
 import OpponentsPage from './pages/OpponentsPage';
@@ -58,13 +58,32 @@ const appStyle: React.CSSProperties = {
   minHeight: '100vh',
   background: '#0B0C10',
   color: '#FFFFFF',
-  padding: '20px',
+  padding: '10px',
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
 };
 
 const mainStyle: React.CSSProperties = {
   maxWidth: '1400px',
-  margin: '0 auto'
+  margin: '0 auto',
+  width: '100%'
 };
+
+// Add responsive styles via CSS classes
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .App {
+        padding: 16px !important;
+      }
+    }
+    @media (min-width: 768px) {
+      .App {
+        padding: 20px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default App;

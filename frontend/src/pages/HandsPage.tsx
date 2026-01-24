@@ -3,7 +3,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from '../services/axiosConfig';
+import { addResponsiveStyles } from '../utils/responsiveStyles';
+
+// Initialize responsive styles
+if (typeof document !== 'undefined') {
+  addResponsiveStyles();
+}
 
 interface Hand {
   id: number;
@@ -39,9 +45,10 @@ const HandsPage: React.FC = () => {
         params.limit_type = limitFilter;
       }
       const response = await axios.get('/api/v1/hands/recent', { params });
-      setHands(response.data);
-    } catch (error) {
+      setHands(response.data || []);
+    } catch (error: any) {
       console.error('Error fetching hands:', error);
+      setHands([]);
     } finally {
       setLoading(false);
     }
@@ -75,8 +82,8 @@ const HandsPage: React.FC = () => {
   }
 
   return (
-    <div style={pageStyle}>
-      <div style={headerStyle}>
+    <div style={pageStyle} className="user-page-container">
+      <div style={headerStyle} className="user-page-header">
         <h1 style={{ margin: 0 }}>История раздач</h1>
         <div style={filterGroupStyle}>
           {['all', 'NL2', 'NL5', 'NL10', 'NL25', 'NL50'].map(f => (
@@ -94,7 +101,7 @@ const HandsPage: React.FC = () => {
         </div>
       </div>
 
-      <div style={summaryStyle}>
+      <div style={summaryStyle} className="hands-summary">
         <div style={summaryItemStyle}>
           <span style={summaryLabelStyle}>Показано раздач</span>
           <span style={summaryValueStyle}>{hands.length}</span>
@@ -107,7 +114,7 @@ const HandsPage: React.FC = () => {
         </div>
       </div>
 
-      <div style={tableContainerStyle}>
+      <div style={tableContainerStyle} className="user-table-wrapper hands-table-wrapper">
         <table style={tableStyle}>
           <thead>
             <tr style={tableHeaderStyle}>
@@ -153,7 +160,7 @@ const HandsPage: React.FC = () => {
         )}
       </div>
 
-      <div style={paginationStyle}>
+      <div style={paginationStyle} className="hands-pagination">
         <button
           onClick={() => setPage(p => Math.max(1, p - 1))}
           disabled={page === 1}
@@ -174,17 +181,56 @@ const HandsPage: React.FC = () => {
   );
 };
 
-const pageStyle: React.CSSProperties = { padding: '20px' };
+const pageStyle: React.CSSProperties = { padding: '12px' };
 const loadingStyle: React.CSSProperties = { textAlign: 'center', padding: '50px', color: '#C5C6C7' };
-const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', padding: '20px', background: '#1F2833', borderRadius: '8px' };
-const filterGroupStyle: React.CSSProperties = { display: 'flex', gap: '10px' };
+const headerStyle: React.CSSProperties = { 
+  display: 'flex', 
+  flexDirection: 'column',
+  justifyContent: 'space-between', 
+  alignItems: 'flex-start', 
+  gap: '12px',
+  marginBottom: '24px', 
+  padding: '16px', 
+  background: '#1F2833', 
+  borderRadius: '8px' 
+};
+const filterGroupStyle: React.CSSProperties = { 
+  display: 'flex', 
+  flexWrap: 'wrap',
+  gap: '8px',
+  width: '100%'
+};
 const filterButtonStyle: React.CSSProperties = { padding: '8px 16px', border: '1px solid #C5C6C7', background: 'transparent', color: '#C5C6C7', borderRadius: '4px', cursor: 'pointer' };
 const activeFilterStyle: React.CSSProperties = { background: '#66FCF1', color: '#0B0C10', border: '1px solid #66FCF1' };
-const summaryStyle: React.CSSProperties = { display: 'flex', gap: '20px', marginBottom: '20px' };
+const summaryStyle: React.CSSProperties = { 
+  display: 'flex', 
+  flexDirection: 'column',
+  gap: '16px', 
+  marginBottom: '20px' 
+};
+
+// Add responsive styles
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .hands-summary {
+        flex-direction: row !important;
+        gap: 20px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 const summaryItemStyle: React.CSSProperties = { flex: 1, padding: '20px', background: '#1F2833', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '10px' };
 const summaryLabelStyle: React.CSSProperties = { color: '#C5C6C7', fontSize: '14px' };
 const summaryValueStyle: React.CSSProperties = { color: '#66FCF1', fontSize: '24px', fontWeight: 'bold' };
-const tableContainerStyle: React.CSSProperties = { background: '#1F2833', borderRadius: '8px', overflow: 'hidden' };
+const tableContainerStyle: React.CSSProperties = { 
+  background: '#1F2833', 
+  borderRadius: '8px', 
+  overflow: 'hidden',
+  overflowX: 'auto'
+};
 const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse' };
 const tableHeaderStyle: React.CSSProperties = { background: '#0B0C10' };
 const thStyle: React.CSSProperties = { padding: '15px', textAlign: 'left', color: '#66FCF1', fontWeight: 'bold' };
@@ -193,6 +239,14 @@ const tdStyle: React.CSSProperties = { padding: '12px 15px', color: '#C5C6C7' };
 const limitBadgeStyle: React.CSSProperties = { background: '#45A29E', padding: '4px 10px', borderRadius: '4px', fontSize: '12px' };
 const emptyStateStyle: React.CSSProperties = { textAlign: 'center', padding: '50px', color: '#C5C6C7' };
 const paginationStyle: React.CSSProperties = { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginTop: '20px' };
-const pageButtonStyle: React.CSSProperties = { padding: '10px 20px', background: '#45A29E', border: 'none', borderRadius: '4px', color: '#FFFFFF', cursor: 'pointer' };
+const pageButtonStyle: React.CSSProperties = { 
+  padding: '10px 20px', 
+  background: '#45A29E', 
+  border: 'none', 
+  borderRadius: '4px', 
+  color: '#FFFFFF', 
+  cursor: 'pointer',
+  minWidth: '100px'
+};
 
 export default HandsPage;

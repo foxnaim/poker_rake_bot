@@ -21,6 +21,15 @@ from data.models import Agent, BotSession
 router = APIRouter(prefix="/api/v1", tags=["agents"])
 
 
+def _get_heartbeat_lag(last_seen: Optional[datetime]) -> float:
+    """Calculate heartbeat lag handling timezone-naive datetimes from SQLite"""
+    if not last_seen:
+        return 0.0
+    if last_seen.tzinfo is None:
+        last_seen = last_seen.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - last_seen).total_seconds()
+
+
 @router.websocket("/agent/ws/{agent_id}")
 async def agent_websocket(websocket: WebSocket, agent_id: str):
     """
@@ -91,8 +100,7 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                     # Обновляем Prometheus метрики
                     from api.metrics import agent_online, agent_heartbeat_lag_seconds
                     agent_online.labels(agent_id=agent_id).set(1.0 if agent.status == "online" else 0.0)
-                    lag = (datetime.now(timezone.utc) - agent.last_seen).total_seconds() if agent.last_seen else 0
-                    agent_heartbeat_lag_seconds.labels(agent_id=agent_id).set(lag)
+                    agent_heartbeat_lag_seconds.labels(agent_id=agent_id).set(_get_heartbeat_lag(agent.last_seen))
                     
                     # Получаем pending команды из метаданных агента
                     pending_commands = []
@@ -172,7 +180,7 @@ async def agent_heartbeat_http(
     - errors (опционально)
     """
     agent = db.query(Agent).filter(Agent.agent_id == request.agent_id).first()
-    
+
     if not agent:
         agent = Agent(
             agent_id=request.agent_id,
@@ -185,31 +193,37 @@ async def agent_heartbeat_http(
         agent.status = request.status or "online"
         agent.last_seen = datetime.now(timezone.utc)
         agent.version = request.version
-        
-        # Обновляем assigned_session_id если есть
-        if request.session_id:
-            session = db.query(BotSession).filter(
-                BotSession.session_id == request.session_id
-            ).first()
-            if session:
-                agent.assigned_session_id = session.id
-        
-        # Сохраняем ошибки
-        if request.errors:
-            agent.meta = agent.meta or {}
-            agent.meta["last_errors"] = request.errors
-            # Обновляем метрики ошибок
-            from api.metrics import agent_errors_total
-            for error in request.errors:
-                agent_errors_total.labels(agent_id=request.agent_id, error_type="general").inc()
-    
+
+    # Обновляем assigned_session_id если есть (для новых и существующих агентов)
+    if request.session_id:
+        session = db.query(BotSession).filter(
+            BotSession.session_id == request.session_id
+        ).first()
+        if session:
+            agent.assigned_session_id = session.id
+
+    # Сохраняем ошибки (для новых и существующих агентов)
+    if request.errors:
+        agent.meta = agent.meta or {}
+        agent.meta["last_errors"] = request.errors
+        # Обновляем метрики ошибок
+        from api.metrics import agent_errors_total
+        for error in request.errors:
+            agent_errors_total.labels(agent_id=request.agent_id, error_type="general").inc()
+
     db.commit()
     db.refresh(agent)
     
     # Обновляем Prometheus метрики
     from api.metrics import agent_online, agent_heartbeat_lag_seconds
     agent_online.labels(agent_id=agent.agent_id).set(1.0 if agent.status == "online" else 0.0)
-    lag = (datetime.now(timezone.utc) - agent.last_seen).total_seconds() if agent.last_seen else 0
+    # Handle timezone-naive datetimes from SQLite
+    lag = 0
+    if agent.last_seen:
+        last_seen = agent.last_seen
+        if last_seen.tzinfo is None:
+            last_seen = last_seen.replace(tzinfo=timezone.utc)
+        lag = (datetime.now(timezone.utc) - last_seen).total_seconds()
     agent_heartbeat_lag_seconds.labels(agent_id=agent.agent_id).set(lag)
     
     # Получаем команды для агента из очереди в метаданных
@@ -296,7 +310,7 @@ async def get_agent_status(
         )
     
     # Вычисляем heartbeat lag (секунды с последнего heartbeat)
-    heartbeat_lag = (datetime.now(timezone.utc) - agent.last_seen).total_seconds() if agent.last_seen else None
+    heartbeat_lag = _get_heartbeat_lag(agent.last_seen) if agent.last_seen else None
 
     assigned_session_key = None
     table_key = None
@@ -340,7 +354,7 @@ async def list_agents(
             assigned_session_id=a.assigned_session_id,
             assigned_session_key=(a.assigned_session.session_id if a.assigned_session is not None else None),
             table_key=(a.assigned_session.table.external_table_id if a.assigned_session is not None and a.assigned_session.table is not None else None),
-            heartbeat_lag_seconds=(datetime.now(timezone.utc) - a.last_seen).total_seconds() if a.last_seen else None
+            heartbeat_lag_seconds=_get_heartbeat_lag(a.last_seen) if a.last_seen else None
         )
         for a in agents
     ]

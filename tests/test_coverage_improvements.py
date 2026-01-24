@@ -157,19 +157,21 @@ class TestAdminAPIEdgeCases:
     def test_create_bot_duplicate_alias(self, client: TestClient, db: Session, admin_key: str):
         """Попытка создать бота с дублирующимся alias"""
         headers = {"X-API-Key": admin_key}
-        
+        unique_suffix = secrets.token_hex(4)
+        bot_alias = f"DuplicateBot_{unique_suffix}"
+
         # Первый бот
         response1 = client.post(
             "/api/v1/admin/bots",
-            json={"alias": "DuplicateBot", "default_style": "neutral", "default_limit": "NL10"},
+            json={"alias": bot_alias, "default_style": "balanced", "default_limit": "NL10"},
             headers=headers
         )
         assert response1.status_code == 201
-        
+
         # Второй бот с тем же alias (может быть разрешено или нет, зависит от реализации)
         response2 = client.post(
             "/api/v1/admin/bots",
-            json={"alias": "DuplicateBot", "default_style": "neutral", "default_limit": "NL10"},
+            json={"alias": bot_alias, "default_style": "balanced", "default_limit": "NL10"},
             headers=headers
         )
         # Может быть 201 (разрешено) или 400 (дубликат)
@@ -193,12 +195,16 @@ class TestAdminAPIEdgeCases:
     def test_start_session_inactive_bot(self, client: TestClient, db: Session, admin_key: str):
         """Попытка запустить сессию для неактивного бота"""
         headers = {"X-API-Key": admin_key}
-        
+        unique_suffix = secrets.token_hex(4)
+
         # Создаём неактивного бота
-        bot = Bot(alias="InactiveBot", default_style="neutral", default_limit="NL10", active=False)
-        room = Room(room_link="test_room", type="pokerking", status="active")
+        bot = Bot(alias=f"InactiveBot_{unique_suffix}", default_style="balanced", default_limit="NL10", active=False)
+        room = Room(room_link=f"test_room_inactive_{unique_suffix}", type="pokerking", status="active")
+        db.add_all([bot, room])
+        db.commit()
+
         table = Table(room_id=room.id, limit_type="NL10", max_players=6)
-        db.add_all([bot, room, table])
+        db.add(table)
         db.commit()
         
         response = client.post(
@@ -251,18 +257,22 @@ class TestIntegrationEdgeCases:
 
     def test_table_key_resolution_edge_cases(self, client: TestClient, db: Session):
         """Различные варианты table_key resolution"""
+        unique_suffix = secrets.token_hex(4)
         # Создаём стол с external_table_id
-        room = Room(room_link="test_room", type="pokerking", status="active")
-        table = Table(room_id=room.id, external_table_id="special_table_key", limit_type="NL10", max_players=6)
-        db.add_all([room, table])
+        room = Room(room_link=f"test_room_resolution_{unique_suffix}", type="pokerking", status="active")
+        db.add(room)
+        db.commit()
+
+        table = Table(room_id=room.id, external_table_id=f"special_table_key_{unique_suffix}", limit_type="NL10", max_players=6)
+        db.add(table)
         db.commit()
         
         # Запрос с table_key как строкой
         response1 = client.post(
             "/api/v1/decide",
             json={
-                "hand_id": "test_1",
-                "table_id": "special_table_key",  # Используем table_key
+                "hand_id": f"test_1_{unique_suffix}",
+                "table_id": f"special_table_key_{unique_suffix}",  # Используем table_key
                 "limit_type": "NL10",
                 "street": "preflop",
                 "hero_position": 0,
@@ -287,7 +297,7 @@ class TestIntegrationEdgeCases:
         response2 = client.post(
             "/api/v1/decide",
             json={
-                "hand_id": "test_2",
+                "hand_id": f"test_2_{unique_suffix}",
                 "table_id": str(table.id),  # Используем PK
                 "limit_type": "NL10",
                 "street": "preflop",

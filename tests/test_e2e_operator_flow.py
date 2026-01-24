@@ -18,6 +18,7 @@ os.environ["ENABLE_ADMIN_API"] = "1"
 os.environ["TESTING"] = "1"  # Для ослабления rate limiting
 
 import pytest
+import secrets
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
@@ -78,13 +79,14 @@ class TestE2EOperatorFlow:
     ):
         """Полный flow с table_key: room → table → bot → session → agent → decide → log_hand"""
         headers = {"X-API-Key": admin_key}
-        table_key = f"e2e_table_{int(datetime.now(timezone.utc).timestamp())}"
-        
+        unique_suffix = secrets.token_hex(4)
+        table_key = f"e2e_table_{unique_suffix}"
+
         # 1. Создать комнату
         room_response = client.post(
             "/api/v1/admin/rooms",
             json={
-                "room_link": "https://test-room-e2e.com",
+                "room_link": f"https://test-room-e2e-{unique_suffix}.com",
                 "type": "pokerstars",
                 "meta": {"test": "e2e"}
             },
@@ -113,7 +115,7 @@ class TestE2EOperatorFlow:
         bot_response = client.post(
             "/api/v1/admin/bots",
             json={
-                "alias": "e2e_test_bot",
+                "alias": f"e2e_test_bot_{unique_suffix}",
                 "default_style": "balanced",
                 "default_limit": "NL10",
                 "active": True

@@ -3,9 +3,9 @@
  * Beautiful design with React-icons and Framer Motion animations
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FaChartBar, 
   FaUsers, 
@@ -25,6 +25,20 @@ import { GiPokerHand, GiCardPlay } from 'react-icons/gi';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -49,11 +63,13 @@ const Navbar: React.FC = () => {
   ];
 
   return (
+    <>
     <motion.nav
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       style={navStyle}
+      className="navbar"
     >
       <motion.div
         whileHover={{ scale: 1.05 }}
@@ -63,42 +79,106 @@ const Navbar: React.FC = () => {
           animate={{ rotate: [0, 360] }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
         >
-          <GiPokerHand style={{ fontSize: '32px', color: '#66FCF1' }} />
+          <GiPokerHand style={{ fontSize: isMobile ? '24px' : '32px', color: '#66FCF1' }} />
         </motion.div>
-        <h2 style={brandTitleStyle}>Покер Рейк Бот</h2>
+        <h2 style={brandTitleStyle} className="navbar-brand-title">Покер Рейк Бот</h2>
       </motion.div>
       
-      <div style={linksStyle}>
-        {navItems.map((item, index) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            icon={item.icon}
-            label={item.label}
-            isActive={isActive(item.path)}
-            delay={index * 0.05}
+      {!isMobile ? (
+        <div style={linksStyle} className="navbar-links">
+          {navItems.map((item, index) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              icon={item.icon}
+              label={item.label}
+              isActive={isActive(item.path)}
+              delay={index * 0.05}
+            />
+          ))}
+          
+          <motion.div
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            style={separatorStyle}
           />
-        ))}
-        
-        <motion.div
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, delay: 0.3 }}
-          style={separatorStyle}
-        />
-        
-        {adminItems.map((item, index) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            icon={item.icon}
-            label={item.label}
-            isActive={isActive(item.path)}
-            delay={0.3 + index * 0.05}
-          />
-        ))}
-      </div>
+          
+          {adminItems.map((item, index) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              icon={item.icon}
+              label={item.label}
+              isActive={isActive(item.path)}
+              delay={0.3 + index * 0.05}
+            />
+          ))}
+        </div>
+      ) : (
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          style={mobileMenuButtonStyle}
+          className="navbar-mobile-menu-button"
+          aria-label="Toggle menu"
+        >
+          <motion.div
+            animate={{ rotate: isMobileMenuOpen ? 180 : 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#66FCF1" strokeWidth="2">
+              {isMobileMenuOpen ? (
+                <path d="M18 6L6 18M6 6l12 12" />
+              ) : (
+                <path d="M3 12h18M3 6h18M3 18h18" />
+              )}
+            </svg>
+          </motion.div>
+        </button>
+      )}
     </motion.nav>
+    
+    <AnimatePresence>
+      {isMobile && isMobileMenuOpen && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.3 }}
+          style={mobileMenuStyle}
+          className="navbar-mobile-menu"
+        >
+          <div style={mobileMenuContentStyle}>
+            {navItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                icon={item.icon}
+                label={item.label}
+                isActive={isActive(item.path)}
+                delay={0}
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+            ))}
+            
+            <div style={mobileSeparatorStyle} />
+            
+            {adminItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                icon={item.icon}
+                label={item.label}
+                isActive={isActive(item.path)}
+                delay={0}
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+            ))}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 };
 
@@ -108,14 +188,15 @@ const NavLink: React.FC<{
   label: string;
   isActive: boolean;
   delay: number;
-}> = ({ to, icon: Icon, label, isActive, delay }) => {
+  onClick?: () => void;
+}> = ({ to, icon: Icon, label, isActive, delay, onClick }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay }}
     >
-      <Link to={to} style={{ textDecoration: 'none' }}>
+      <Link to={to} style={{ textDecoration: 'none' }} onClick={onClick}>
         <motion.div
           whileHover={{ scale: 1.05, y: -2 }}
           whileTap={{ scale: 0.95 }}
@@ -123,6 +204,7 @@ const NavLink: React.FC<{
             ...linkStyle,
             ...(isActive ? activeLinkStyle : {})
           }}
+          className="navbar-link"
         >
           <motion.div
             animate={isActive ? { 
@@ -153,16 +235,39 @@ const navStyle: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '20px 32px',
+  padding: '12px 16px',
   background: 'linear-gradient(135deg, #1F2937 0%, #111827 100%)',
-  borderRadius: '16px',
-  marginBottom: '24px',
+  borderRadius: '12px',
+  marginBottom: '16px',
   border: '1px solid #374151',
   boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
   position: 'sticky',
-  top: '20px',
+  top: '10px',
   zIndex: 1000
 };
+
+// Add responsive padding via CSS
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .navbar {
+        padding: 16px 24px !important;
+        margin-bottom: 20px !important;
+        top: 16px !important;
+      }
+    }
+    @media (min-width: 768px) {
+      .navbar {
+        padding: 20px 32px !important;
+        margin-bottom: 24px !important;
+        top: 20px !important;
+        border-radius: 16px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 const brandStyle: React.CSSProperties = {
   display: 'flex',
@@ -173,12 +278,13 @@ const brandStyle: React.CSSProperties = {
 
 const brandTitleStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: '24px',
+  fontSize: '18px',
   fontWeight: '700',
   background: 'linear-gradient(135deg, #66FCF1 0%, #45A29E 100%)',
   WebkitBackgroundClip: 'text',
   WebkitTextFillColor: 'transparent',
-  backgroundClip: 'text'
+  backgroundClip: 'text',
+  whiteSpace: 'nowrap'
 };
 
 const linksStyle: React.CSSProperties = {
@@ -191,14 +297,14 @@ const linksStyle: React.CSSProperties = {
 const linkStyle: React.CSSProperties = {
   color: '#9CA3AF',
   textDecoration: 'none',
-  padding: '12px 20px',
-  borderRadius: '12px',
+  padding: '8px 12px',
+  borderRadius: '8px',
   transition: 'all 0.3s ease',
   fontWeight: '500',
-  fontSize: '14px',
+  fontSize: '13px',
   display: 'flex',
   alignItems: 'center',
-  gap: '10px',
+  gap: '8px',
   position: 'relative',
   overflow: 'hidden'
 };
@@ -235,5 +341,41 @@ const separatorStyle: React.CSSProperties = {
   height: '32px',
   margin: '0 8px'
 };
+
+const mobileMenuButtonStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: '1px solid #66FCF1',
+  borderRadius: '8px',
+  padding: '8px',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#66FCF1'
+};
+
+const mobileMenuStyle: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #1F2937 0%, #111827 100%)',
+  borderRadius: '16px',
+  marginTop: '10px',
+  marginBottom: '24px',
+  border: '1px solid #374151',
+  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
+  overflow: 'hidden'
+};
+
+const mobileMenuContentStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+  padding: '12px'
+};
+
+const mobileSeparatorStyle: React.CSSProperties = {
+  borderTop: '2px solid #374151',
+  margin: '8px 0'
+};
+
+// Responsive styles are handled in responsiveStyles.ts utility
 
 export default Navbar;

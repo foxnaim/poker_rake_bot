@@ -4,6 +4,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
+import { addResponsiveStyles } from '../utils/responsiveStyles';
+
+// Initialize responsive styles
+if (typeof document !== 'undefined') {
+  addResponsiveStyles();
+}
 
 const AdminBotConfigsPage: React.FC = () => {
   const [configs, setConfigs] = useState<any[]>([]);
@@ -45,10 +51,12 @@ const AdminBotConfigsPage: React.FC = () => {
         apiClient.getBotConfigs(),
         apiClient.getBots()
       ]);
-      setConfigs(configsData);
-      setBots(botsData);
-    } catch (error) {
+      setConfigs(configsData || []);
+      setBots(botsData || []);
+    } catch (error: any) {
       console.error('Error loading data:', error);
+      setConfigs([]);
+      setBots([]);
       alert('Ошибка загрузки данных');
     } finally {
       setLoading(false);
@@ -60,9 +68,10 @@ const AdminBotConfigsPage: React.FC = () => {
       const data = botFilter 
         ? await apiClient.getBotConfigs(botFilter)
         : await apiClient.getBotConfigs();
-      setConfigs(data);
-    } catch (error) {
+      setConfigs(data || []);
+    } catch (error: any) {
       console.error('Error loading configs:', error);
+      setConfigs([]);
       alert('Ошибка загрузки конфигов');
     }
   };
@@ -151,14 +160,14 @@ const AdminBotConfigsPage: React.FC = () => {
   }
 
   return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
+    <div style={containerStyle} className="admin-page-container">
+      <div style={headerStyle} className="admin-page-header">
         <h1 style={{ color: '#66FCF1', margin: 0 }}>Управление конфигурациями ботов</h1>
         <button onClick={() => {
           setShowForm(!showForm);
           setEditingConfig(null);
           resetForm();
-        }} style={buttonStyle}>
+        }} style={buttonStyle} className="admin-button">
           {showForm ? 'Отмена' : '+ Создать конфиг'}
         </button>
       </div>
@@ -186,6 +195,7 @@ const AdminBotConfigsPage: React.FC = () => {
             value={formData.bot_id}
             onChange={(e) => setFormData({ ...formData, bot_id: parseInt(e.target.value) })}
             style={inputStyle}
+            className="admin-input"
             disabled={!!editingConfig}
           >
             <option value={0}>Выберите бота</option>
@@ -201,7 +211,7 @@ const AdminBotConfigsPage: React.FC = () => {
             style={inputStyle}
           />
           <div style={rowStyle}>
-            <div style={colStyle}>
+            <div style={colStyle} className="admin-form-col">
               <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Целевой VPIP</label>
               <input
                 type="number"
@@ -209,9 +219,10 @@ const AdminBotConfigsPage: React.FC = () => {
                 value={formData.target_vpip}
                 onChange={(e) => setFormData({ ...formData, target_vpip: parseFloat(e.target.value) })}
                 style={inputStyle}
+                className="admin-input"
               />
             </div>
-            <div style={colStyle}>
+            <div style={colStyle} className="admin-form-col">
               <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Целевой PFR</label>
               <input
                 type="number"
@@ -219,9 +230,10 @@ const AdminBotConfigsPage: React.FC = () => {
                 value={formData.target_pfr}
                 onChange={(e) => setFormData({ ...formData, target_pfr: parseFloat(e.target.value) })}
                 style={inputStyle}
+                className="admin-input"
               />
             </div>
-            <div style={colStyle}>
+            <div style={colStyle} className="admin-form-col">
               <label style={{ color: '#C5C6C7', fontSize: '12px', marginBottom: '5px' }}>Целевой AF</label>
               <input
                 type="number"
@@ -229,6 +241,7 @@ const AdminBotConfigsPage: React.FC = () => {
                 value={formData.target_af}
                 onChange={(e) => setFormData({ ...formData, target_af: parseFloat(e.target.value) })}
                 style={inputStyle}
+                className="admin-input"
               />
             </div>
           </div>
@@ -242,8 +255,8 @@ const AdminBotConfigsPage: React.FC = () => {
                 river: 'Ривер'
               };
               return (
-              <div key={street} style={rowStyle}>
-                <label style={{ color: '#C5C6C7', width: '100px' }}>{streetNames[street] || street}:</label>
+              <div key={street} style={rowStyle} className="admin-form-row">
+                <label style={{ color: '#C5C6C7', width: '100%', marginBottom: '4px' }}>{streetNames[street] || street}:</label>
                 <input
                   type="number"
                   step="0.1"
@@ -257,7 +270,8 @@ const AdminBotConfigsPage: React.FC = () => {
                       [street]: parseFloat(e.target.value)
                     }
                   })}
-                  style={{...inputStyle, width: '100px'}}
+                  style={{...inputStyle, width: '100%'}}
+                  className="admin-input"
                 />
               </div>
             );
@@ -272,6 +286,7 @@ const AdminBotConfigsPage: React.FC = () => {
               max_winrate_cap: e.target.value ? parseFloat(e.target.value) : null 
             })}
             style={inputStyle}
+            className="admin-input"
           />
           <label style={{ color: '#C5C6C7', display: 'flex', alignItems: 'center', marginTop: '10px' }}>
             <input
@@ -285,6 +300,7 @@ const AdminBotConfigsPage: React.FC = () => {
           <button 
             onClick={editingConfig ? handleUpdate : handleCreate} 
             style={buttonStyle}
+            className="admin-button"
             disabled={!formData.bot_id || !formData.name}
           >
             {editingConfig ? 'Сохранить' : 'Создать'}
@@ -292,12 +308,12 @@ const AdminBotConfigsPage: React.FC = () => {
         </div>
       )}
 
-      <div style={listStyle}>
+      <div style={listStyle} className="admin-list-grid">
         {filteredConfigs.map((config) => {
           const bot = bots.find(b => b.id === config.bot_id);
           return (
-            <div key={config.id} style={cardStyle}>
-              <div style={cardHeaderStyle}>
+            <div key={config.id} style={cardStyle} className="admin-card">
+              <div style={cardHeaderStyle} className="admin-card-header">
                 <div>
                   <span style={{ color: '#66FCF1', fontWeight: 'bold', fontSize: '18px' }}>
                     {config.name}
@@ -318,16 +334,18 @@ const AdminBotConfigsPage: React.FC = () => {
                     Бот: {bot?.alias || `ID ${config.bot_id}`}
                   </div>
                 </div>
-                <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }} className="admin-button-group">
                   <button
                     onClick={() => handleEdit(config)}
-                    style={{...buttonStyle, fontSize: '12px', padding: '6px 12px', marginRight: '8px'}}
+                    style={{...buttonStyle, fontSize: '12px', padding: '6px 12px', width: '100%'}}
+                    className="admin-button"
                   >
                     Редактировать
                   </button>
                   <button
                     onClick={() => handleDelete(config.id)}
-                    style={{...buttonStyle, background: '#ff4444', fontSize: '12px', padding: '6px 12px'}}
+                    style={{...buttonStyle, background: '#ff4444', fontSize: '12px', padding: '6px 12px', width: '100%'}}
+                    className="admin-button"
                   >
                     Удалить
                   </button>
@@ -358,16 +376,19 @@ const AdminBotConfigsPage: React.FC = () => {
 };
 
 const containerStyle: React.CSSProperties = {
-  padding: '20px',
+  padding: '12px',
   maxWidth: '1400px',
-  margin: '0 auto'
+  margin: '0 auto',
+  width: '100%'
 };
 
 const headerStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '30px'
+  alignItems: 'flex-start',
+  gap: '12px',
+  marginBottom: '24px'
 };
 
 const filtersStyle: React.CSSProperties = {
@@ -375,7 +396,11 @@ const filtersStyle: React.CSSProperties = {
   padding: '15px',
   background: '#1F2833',
   borderRadius: '8px',
-  border: '1px solid #C5C6C7'
+  border: '1px solid #C5C6C7',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+  alignItems: 'stretch'
 };
 
 const selectStyle: React.CSSProperties = {
@@ -385,7 +410,8 @@ const selectStyle: React.CSSProperties = {
   borderRadius: '4px',
   color: '#FFFFFF',
   fontSize: '14px',
-  minWidth: '300px'
+  minWidth: '100%',
+  width: '100%'
 };
 
 const buttonStyle: React.CSSProperties = {
@@ -396,7 +422,8 @@ const buttonStyle: React.CSSProperties = {
   borderRadius: '4px',
   cursor: 'pointer',
   fontWeight: 'bold',
-  fontSize: '14px'
+  fontSize: '14px',
+  width: '100%'
 };
 
 const formStyle: React.CSSProperties = {
@@ -418,14 +445,29 @@ const inputStyle: React.CSSProperties = {
   fontSize: '14px'
 };
 
+// Add responsive font size for mobile
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (max-width: 639px) {
+      .admin-input {
+        font-size: 16px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 const rowStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   gap: '10px',
   marginBottom: '10px'
 };
 
 const colStyle: React.CSSProperties = {
-  flex: 1
+  flex: 1,
+  width: '100%'
 };
 
 const sectionStyle: React.CSSProperties = {
@@ -437,8 +479,8 @@ const sectionStyle: React.CSSProperties = {
 
 const listStyle: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
-  gap: '20px'
+  gridTemplateColumns: '1fr',
+  gap: '16px'
 };
 
 const cardStyle: React.CSSProperties = {
@@ -450,9 +492,32 @@ const cardStyle: React.CSSProperties = {
 
 const cardHeaderStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
   alignItems: 'flex-start',
+  gap: '12px',
   marginBottom: '10px'
 };
+
+// Add responsive styles
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .admin-card-header {
+        flex-direction: row !important;
+        align-items: flex-start !important;
+      }
+      .admin-button-group {
+        flex-direction: row !important;
+        width: auto !important;
+      }
+      .admin-button-group .admin-button {
+        width: auto !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default AdminBotConfigsPage;

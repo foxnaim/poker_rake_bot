@@ -4,6 +4,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
+import { addResponsiveStyles } from '../utils/responsiveStyles';
+
+// Initialize responsive styles
+if (typeof document !== 'undefined') {
+  addResponsiveStyles();
+}
 
 const AdminAPIKeysPage: React.FC = () => {
   const [keys, setKeys] = useState<any[]>([]);
@@ -24,9 +30,10 @@ const AdminAPIKeysPage: React.FC = () => {
     try {
       setLoading(true);
       const data = await apiClient.getApiKeys();
-      setKeys(data);
-    } catch (error) {
+      setKeys(data || []);
+    } catch (error: any) {
       console.error('Error loading keys:', error);
+      setKeys([]);
       alert('Ошибка загрузки API ключей');
     } finally {
       setLoading(false);
@@ -92,9 +99,9 @@ const AdminAPIKeysPage: React.FC = () => {
 
   return (
     <div style={containerStyle}>
-      <div style={headerStyle}>
+      <div style={headerStyle} className="admin-page-header admin-api-keys-header">
         <h1 style={{ color: '#66FCF1', margin: 0 }}>Управление API ключами</h1>
-        <button onClick={() => setShowForm(!showForm)} style={buttonStyle}>
+        <button onClick={() => setShowForm(!showForm)} style={buttonStyle} className="admin-button">
           {showForm ? 'Отмена' : '+ Создать API ключ'}
         </button>
       </div>
@@ -108,8 +115,9 @@ const AdminAPIKeysPage: React.FC = () => {
             value={formData.client_name}
             onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
             style={inputStyle}
+            className="admin-input"
           />
-          <div style={rowStyle}>
+          <div style={rowStyle} className="admin-form-row">
             <label style={{ color: '#C5C6C7', display: 'flex', alignItems: 'center', marginRight: '20px' }}>
               <input
                 type="checkbox"
@@ -154,18 +162,19 @@ const AdminAPIKeysPage: React.FC = () => {
             value={formData.rate_limit_per_minute}
             onChange={(e) => setFormData({ ...formData, rate_limit_per_minute: parseInt(e.target.value) })}
             style={inputStyle}
+            className="admin-input"
             min="1"
           />
-          <button onClick={handleCreate} style={buttonStyle} disabled={!formData.client_name}>
+          <button onClick={handleCreate} style={buttonStyle} className="admin-button" disabled={!formData.client_name}>
             Создать
           </button>
         </div>
       )}
 
-      <div style={listStyle}>
+      <div style={listStyle} className="admin-list-grid">
         {keys.map((key) => (
-          <div key={key.key_id} style={cardStyle}>
-            <div style={cardHeaderStyle}>
+          <div key={key.key_id} style={cardStyle} className="admin-card">
+            <div style={cardHeaderStyle} className="admin-card-header admin-api-keys-card-header">
               <div>
                 <span style={{ color: '#66FCF1', fontWeight: 'bold', fontSize: '18px' }}>
                   {key.client_name}
@@ -174,7 +183,7 @@ const AdminAPIKeysPage: React.FC = () => {
                   {key.api_key.substring(0, 30)}...
                 </div>
               </div>
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }} className="admin-button-group">
                 <button
                   onClick={() => handleToggle(key.key_id, key.is_active)}
                   style={{
@@ -182,14 +191,16 @@ const AdminAPIKeysPage: React.FC = () => {
                     background: key.is_active ? '#45A29E' : '#C5C6C7',
                     fontSize: '12px',
                     padding: '6px 12px',
-                    marginRight: '8px'
+                    width: '100%'
                   }}
+                  className="admin-button"
                 >
                   {key.is_active ? 'Активен' : 'Неактивен'}
                 </button>
                 <button
                   onClick={() => handleDelete(key.key_id)}
-                  style={{...buttonStyle, background: '#ff4444', fontSize: '12px', padding: '6px 12px'}}
+                  style={{...buttonStyle, background: '#ff4444', fontSize: '12px', padding: '6px 12px', width: '100%'}}
+                  className="admin-button"
                 >
                   Удалить
                 </button>
@@ -215,16 +226,19 @@ const AdminAPIKeysPage: React.FC = () => {
 };
 
 const containerStyle: React.CSSProperties = {
-  padding: '20px',
+  padding: '12px',
   maxWidth: '1200px',
-  margin: '0 auto'
+  margin: '0 auto',
+  width: '100%'
 };
 
 const headerStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '30px'
+  alignItems: 'flex-start',
+  gap: '12px',
+  marginBottom: '24px'
 };
 
 const buttonStyle: React.CSSProperties = {
@@ -235,7 +249,8 @@ const buttonStyle: React.CSSProperties = {
   borderRadius: '4px',
   cursor: 'pointer',
   fontWeight: 'bold',
-  fontSize: '14px'
+  fontSize: '14px',
+  width: '100%'
 };
 
 const formStyle: React.CSSProperties = {
@@ -257,15 +272,30 @@ const inputStyle: React.CSSProperties = {
   fontSize: '14px'
 };
 
+// Add responsive font size for mobile
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (max-width: 639px) {
+      .admin-input {
+        font-size: 16px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 const rowStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
   marginBottom: '10px'
 };
 
 const listStyle: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
-  gap: '20px'
+  gridTemplateColumns: '1fr',
+  gap: '16px'
 };
 
 const cardStyle: React.CSSProperties = {
@@ -277,9 +307,25 @@ const cardStyle: React.CSSProperties = {
 
 const cardHeaderStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
   alignItems: 'flex-start',
+  gap: '12px',
   marginBottom: '10px'
 };
+
+// Add responsive card header
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .admin-api-keys-card-header {
+        flex-direction: row !important;
+        align-items: flex-start !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default AdminAPIKeysPage;

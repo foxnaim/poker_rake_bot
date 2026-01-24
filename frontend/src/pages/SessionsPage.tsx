@@ -3,7 +3,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from '../services/axiosConfig';
+import { addResponsiveStyles } from '../utils/responsiveStyles';
+
+// Initialize responsive styles
+if (typeof document !== 'undefined') {
+  addResponsiveStyles();
+}
 
 interface Session {
   session_id: string;
@@ -11,9 +17,10 @@ interface Session {
   period_start: string;
   period_end: string | null;
   hands_played: number;
-  winrate_bb_100: number;
-  total_rake: number;
-  is_active: boolean;
+  winrate_bb_100?: number;
+  total_rake?: number;
+  profit_bb_100?: number;
+  total_profit?: number;
 }
 
 const SessionsPage: React.FC = () => {
@@ -27,12 +34,16 @@ const SessionsPage: React.FC = () => {
 
   const fetchSessions = async () => {
     try {
+      setLoading(true);
       const response = await axios.get('/api/v1/sessions/recent?limit=50');
-      setSessions(response.data);
-      const active = response.data.find((s: Session) => s.is_active);
+      const sessionsData = response.data || [];
+      setSessions(sessionsData);
+      const active = sessionsData.find((s: Session) => !s.period_end);
       setActiveSession(active || null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching sessions:', error);
+      setSessions([]);
+      setActiveSession(null);
     } finally {
       setLoading(false);
     }
@@ -79,16 +90,16 @@ const SessionsPage: React.FC = () => {
   }
 
   return (
-    <div style={pageStyle}>
-      <div style={headerStyle}>
+    <div style={pageStyle} className="user-page-container">
+      <div style={headerStyle} className="user-page-header">
         <h1 style={{ margin: 0 }}>Игровые сессии</h1>
         <div style={actionsStyle}>
           {activeSession ? (
-            <button onClick={endSession} style={endButtonStyle}>
+            <button onClick={endSession} style={endButtonStyle} className="admin-button">
               Завершить сессию
             </button>
           ) : (
-            <div style={startGroupStyle}>
+            <div style={startGroupStyle} className="session-start-group">
               {['NL2', 'NL5', 'NL10', 'NL25', 'NL50'].map(limit => (
                 <button
                   key={limit}
@@ -109,30 +120,30 @@ const SessionsPage: React.FC = () => {
             <span style={activeBadgeStyle}>ОНЛАЙН</span>
             <h2 style={{ margin: 0 }}>Активная сессия: {activeSession.limit_type}</h2>
           </div>
-          <div style={activeStatsStyle}>
+          <div style={activeStatsStyle} className="session-active-stats">
             <div style={activeStatStyle}>
               <span style={labelStyle}>Длительность</span>
               <span style={valueStyle}>{formatDuration(activeSession.period_start, null)}</span>
             </div>
             <div style={activeStatStyle}>
               <span style={labelStyle}>Раздачи</span>
-              <span style={valueStyle}>{activeSession.hands_played}</span>
+              <span style={valueStyle}>{activeSession.hands_played || 0}</span>
             </div>
             <div style={activeStatStyle}>
               <span style={labelStyle}>Винрейт</span>
               <span style={valueStyle}>
-                {activeSession.winrate_bb_100.toFixed(2)} bb/100
+                {(activeSession.winrate_bb_100 || activeSession.profit_bb_100 || 0).toFixed(2)} bb/100
               </span>
             </div>
             <div style={activeStatStyle}>
               <span style={labelStyle}>Рейк</span>
-              <span style={valueStyle}>${activeSession.total_rake.toFixed(2)}</span>
+              <span style={valueStyle}>${(activeSession.total_rake || 0).toFixed(2)}</span>
             </div>
           </div>
         </div>
       )}
 
-      <div style={tableContainerStyle}>
+      <div style={tableContainerStyle} className="user-table-wrapper sessions-table-wrapper">
         <h3 style={{ margin: '0 0 20px 0', color: '#66FCF1' }}>История сессий</h3>
         <table style={tableStyle}>
           <thead>
@@ -154,11 +165,11 @@ const SessionsPage: React.FC = () => {
                 <td style={tdStyle}>{formatDuration(session.period_start, session.period_end)}</td>
                 <td style={tdStyle}>{session.hands_played}</td>
                 <td style={tdStyle}>
-                  {session.winrate_bb_100.toFixed(2)} bb/100
+                  {(session.winrate_bb_100 || session.profit_bb_100 || 0).toFixed(2)} bb/100
                 </td>
-                <td style={tdStyle}>${session.total_rake.toFixed(2)}</td>
+                <td style={tdStyle}>${(session.total_rake || 0).toFixed(2)}</td>
                 <td style={tdStyle}>
-                  {session.is_active ? (
+                  {!session.period_end ? (
                     <span style={liveBadgeStyle}>ОНЛАЙН</span>
                   ) : (
                     <span style={completedBadgeStyle}>Завершена</span>
@@ -173,21 +184,108 @@ const SessionsPage: React.FC = () => {
   );
 };
 
-const pageStyle: React.CSSProperties = { padding: '20px' };
+const pageStyle: React.CSSProperties = { padding: '12px' };
 const loadingStyle: React.CSSProperties = { textAlign: 'center', padding: '50px', color: '#C5C6C7' };
-const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', padding: '20px', background: '#1F2833', borderRadius: '8px' };
+const headerStyle: React.CSSProperties = { 
+  display: 'flex', 
+  flexDirection: 'column',
+  justifyContent: 'space-between', 
+  alignItems: 'flex-start', 
+  gap: '12px',
+  marginBottom: '24px', 
+  padding: '16px', 
+  background: '#1F2833', 
+  borderRadius: '8px' 
+};
 const actionsStyle: React.CSSProperties = { display: 'flex', gap: '10px' };
-const startGroupStyle: React.CSSProperties = { display: 'flex', gap: '10px' };
-const startButtonStyle: React.CSSProperties = { padding: '10px 20px', background: '#45A29E', border: 'none', borderRadius: '4px', color: '#FFFFFF', cursor: 'pointer', fontWeight: 'bold' };
-const endButtonStyle: React.CSSProperties = { padding: '10px 20px', background: '#F44336', border: 'none', borderRadius: '4px', color: '#FFFFFF', cursor: 'pointer', fontWeight: 'bold' };
+const startGroupStyle: React.CSSProperties = { 
+  display: 'flex', 
+  flexDirection: 'column',
+  gap: '10px',
+  width: '100%'
+};
+
+// Add responsive styles
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .session-start-group {
+        flex-direction: row !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+const startButtonStyle: React.CSSProperties = { 
+  padding: '10px 20px', 
+  background: '#45A29E', 
+  border: 'none', 
+  borderRadius: '4px', 
+  color: '#FFFFFF', 
+  cursor: 'pointer', 
+  fontWeight: 'bold',
+  width: '100%'
+};
+const endButtonStyle: React.CSSProperties = { 
+  padding: '10px 20px', 
+  background: '#F44336', 
+  border: 'none', 
+  borderRadius: '4px', 
+  color: '#FFFFFF', 
+  cursor: 'pointer', 
+  fontWeight: 'bold',
+  width: '100%'
+};
 const activeCardStyle: React.CSSProperties = { background: 'linear-gradient(135deg, #1F2833 0%, #0B0C10 100%)', border: '2px solid #66FCF1', borderRadius: '12px', padding: '25px', marginBottom: '30px' };
 const activeHeaderStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' };
 const activeBadgeStyle: React.CSSProperties = { background: '#4CAF50', color: '#FFFFFF', padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' };
-const activeStatsStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' };
+const activeStatsStyle: React.CSSProperties = { 
+  display: 'grid', 
+  gridTemplateColumns: 'repeat(2, 1fr)', 
+  gap: '16px' 
+};
+
+// Add responsive stats grid
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 768px) {
+      .session-active-stats {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 20px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 const activeStatStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '5px' };
 const labelStyle: React.CSSProperties = { color: '#C5C6C7', fontSize: '14px' };
 const valueStyle: React.CSSProperties = { color: '#66FCF1', fontSize: '24px', fontWeight: 'bold' };
-const tableContainerStyle: React.CSSProperties = { background: '#1F2833', borderRadius: '8px', padding: '20px' };
+const tableContainerStyle: React.CSSProperties = { 
+  background: '#1F2833', 
+  borderRadius: '8px', 
+  padding: '16px',
+  overflowX: 'auto'
+};
+
+// Add responsive table wrapper class
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (max-width: 639px) {
+      .sessions-table-wrapper table {
+        font-size: 12px !important;
+        min-width: 600px;
+      }
+      .sessions-table-wrapper th,
+      .sessions-table-wrapper td {
+        padding: 8px 4px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse' };
 const tableHeaderStyle: React.CSSProperties = { background: '#0B0C10' };
 const thStyle: React.CSSProperties = { padding: '15px', textAlign: 'left', color: '#66FCF1', fontWeight: 'bold' };

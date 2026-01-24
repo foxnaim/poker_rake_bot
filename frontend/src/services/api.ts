@@ -48,6 +48,13 @@ export interface DecisionResponse {
 export class APIClient {
   private apiKey: string | null = null;
 
+  constructor() {
+    // В development режиме используем dev ключ автоматически
+    if (process.env.NODE_ENV === 'development') {
+      this.apiKey = 'dev_admin_key';
+    }
+  }
+
   setApiKey(key: string) {
     this.apiKey = key;
   }

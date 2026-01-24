@@ -4,6 +4,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
+import { addResponsiveStyles } from '../utils/responsiveStyles';
+
+// Initialize responsive styles
+if (typeof document !== 'undefined') {
+  addResponsiveStyles();
+}
 
 const AdminTablesPage: React.FC = () => {
   const [tables, setTables] = useState<any[]>([]);
@@ -33,10 +39,12 @@ const AdminTablesPage: React.FC = () => {
         apiClient.getTables(),
         apiClient.getRooms()
       ]);
-      setTables(tablesData);
-      setRooms(roomsData);
-    } catch (error) {
+      setTables(tablesData || []);
+      setRooms(roomsData || []);
+    } catch (error: any) {
       console.error('Error loading data:', error);
+      setTables([]);
+      setRooms([]);
       alert('Ошибка загрузки данных');
     } finally {
       setLoading(false);
@@ -48,9 +56,10 @@ const AdminTablesPage: React.FC = () => {
       const data = roomFilter 
         ? await apiClient.getTables(roomFilter)
         : await apiClient.getTables();
-      setTables(data);
-    } catch (error) {
+      setTables(data || []);
+    } catch (error: any) {
       console.error('Error loading tables:', error);
+      setTables([]);
       alert('Ошибка загрузки столов');
     }
   };
@@ -88,20 +97,21 @@ const AdminTablesPage: React.FC = () => {
     : tables;
 
   return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
+    <div style={containerStyle} className="admin-page-container">
+      <div style={headerStyle} className="admin-page-header">
         <h1 style={{ color: '#66FCF1', margin: 0 }}>Управление столами</h1>
-        <button onClick={() => setShowForm(!showForm)} style={buttonStyle}>
+        <button onClick={() => setShowForm(!showForm)} style={buttonStyle} className="admin-button">
           {showForm ? 'Отмена' : '+ Создать стол'}
         </button>
       </div>
 
-      <div style={filtersStyle}>
+      <div style={filtersStyle} className="admin-form-row">
         <label style={{ color: '#C5C6C7', marginRight: '10px' }}>Фильтр по комнате:</label>
         <select
           value={roomFilter || ''}
           onChange={(e) => setRoomFilter(e.target.value ? parseInt(e.target.value) : null)}
           style={selectStyle}
+          className="admin-input admin-select-filter"
         >
           <option value="">Все комнаты</option>
           {rooms.map(room => (
@@ -119,6 +129,7 @@ const AdminTablesPage: React.FC = () => {
             value={formData.room_id}
             onChange={(e) => setFormData({ ...formData, room_id: parseInt(e.target.value) })}
             style={inputStyle}
+            className="admin-input"
           >
             <option value={0}>Выберите комнату</option>
             {rooms.map(room => (
@@ -131,6 +142,7 @@ const AdminTablesPage: React.FC = () => {
             value={formData.limit_type}
             onChange={(e) => setFormData({ ...formData, limit_type: e.target.value })}
             style={inputStyle}
+            className="admin-input"
           >
             <option value="NL10">NL10</option>
             <option value="NL25">NL25</option>
@@ -144,21 +156,22 @@ const AdminTablesPage: React.FC = () => {
             value={formData.max_players}
             onChange={(e) => setFormData({ ...formData, max_players: parseInt(e.target.value) })}
             style={inputStyle}
+            className="admin-input"
             min="2"
             max="10"
           />
-          <button onClick={handleCreate} style={buttonStyle} disabled={!formData.room_id}>
+          <button onClick={handleCreate} style={buttonStyle} className="admin-button" disabled={!formData.room_id}>
             Создать
           </button>
         </div>
       )}
 
-      <div style={listStyle}>
+      <div style={listStyle} className="admin-list-grid">
         {filteredTables.map((table) => {
           const room = rooms.find(r => r.id === table.room_id);
           return (
-            <div key={table.id} style={cardStyle}>
-              <div style={cardHeaderStyle}>
+            <div key={table.id} style={cardStyle} className="admin-card">
+              <div style={cardHeaderStyle} className="admin-card-header admin-tables-card-header">
                 <div>
                   <span style={{ color: '#66FCF1', fontWeight: 'bold', fontSize: '18px' }}>
                     {table.limit_type}
@@ -169,7 +182,8 @@ const AdminTablesPage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => handleDelete(table.id)}
-                  style={{...buttonStyle, background: '#ff4444', fontSize: '12px', padding: '6px 12px'}}
+                  style={{...buttonStyle, background: '#ff4444', fontSize: '12px', padding: '6px 12px', width: 'auto'}}
+                  className="admin-button"
                 >
                   Удалить
                 </button>
@@ -196,16 +210,19 @@ const AdminTablesPage: React.FC = () => {
 };
 
 const containerStyle: React.CSSProperties = {
-  padding: '20px',
+  padding: '12px',
   maxWidth: '1200px',
-  margin: '0 auto'
+  margin: '0 auto',
+  width: '100%'
 };
 
 const headerStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '30px'
+  alignItems: 'flex-start',
+  gap: '12px',
+  marginBottom: '24px'
 };
 
 const filtersStyle: React.CSSProperties = {
@@ -213,7 +230,11 @@ const filtersStyle: React.CSSProperties = {
   padding: '15px',
   background: '#1F2833',
   borderRadius: '8px',
-  border: '1px solid #C5C6C7'
+  border: '1px solid #C5C6C7',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+  alignItems: 'stretch'
 };
 
 const selectStyle: React.CSSProperties = {
@@ -223,8 +244,27 @@ const selectStyle: React.CSSProperties = {
   borderRadius: '4px',
   color: '#FFFFFF',
   fontSize: '14px',
-  minWidth: '300px'
+  minWidth: '100%',
+  width: '100%'
 };
+
+// Add responsive min-width
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .admin-select-filter {
+        min-width: 200px !important;
+      }
+    }
+    @media (min-width: 768px) {
+      .admin-select-filter {
+        min-width: 300px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 const buttonStyle: React.CSSProperties = {
   background: '#66FCF1',
@@ -234,7 +274,8 @@ const buttonStyle: React.CSSProperties = {
   borderRadius: '4px',
   cursor: 'pointer',
   fontWeight: 'bold',
-  fontSize: '14px'
+  fontSize: '14px',
+  width: '100%'
 };
 
 const formStyle: React.CSSProperties = {
@@ -256,10 +297,23 @@ const inputStyle: React.CSSProperties = {
   fontSize: '14px'
 };
 
+// Add responsive font size for mobile
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (max-width: 639px) {
+      .admin-input {
+        font-size: 16px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 const listStyle: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-  gap: '20px'
+  gridTemplateColumns: '1fr',
+  gap: '16px'
 };
 
 const cardStyle: React.CSSProperties = {
@@ -271,9 +325,28 @@ const cardStyle: React.CSSProperties = {
 
 const cardHeaderStyle: React.CSSProperties = {
   display: 'flex',
+  flexDirection: 'column',
   justifyContent: 'space-between',
   alignItems: 'flex-start',
+  gap: '12px',
   marginBottom: '10px'
 };
+
+// Add responsive styles
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (min-width: 640px) {
+      .admin-card-header {
+        flex-direction: row !important;
+        align-items: flex-start !important;
+      }
+      .admin-card-header .admin-button {
+        width: auto !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default AdminTablesPage;

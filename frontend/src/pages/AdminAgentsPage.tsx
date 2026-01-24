@@ -3,7 +3,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from '../services/axiosConfig';
+import { addResponsiveStyles } from '../utils/responsiveStyles';
+
+// Initialize responsive styles
+if (typeof document !== 'undefined') {
+  addResponsiveStyles();
+}
 
 interface Agent {
   agent_id: string;
@@ -30,12 +36,12 @@ const AdminAgentsPage: React.FC = () => {
 
   const fetchAgents = async () => {
     try {
-      const response = await axios.get('/api/v1/agents', {
-        headers: { 'X-Admin-Key': localStorage.getItem('adminKey') || '' }
-      });
-      setAgents(response.data);
+      const response = await axios.get('/api/v1/agents');
+      setAgents(response.data || []);
       setError(null);
     } catch (err: any) {
+      console.error('Error fetching agents:', err);
+      setAgents([]);
       setError(err.response?.data?.detail || 'Ошибка загрузки агентов');
     } finally {
       setLoading(false);
@@ -47,8 +53,6 @@ const AdminAgentsPage: React.FC = () => {
       await axios.post(`/api/v1/agent/${agentId}/command`, {
         command: commandType,
         reason: commandReason
-      }, {
-        headers: { 'X-Admin-Key': localStorage.getItem('adminKey') || '' }
       });
       setCommandAgent(null);
       setCommandReason('');
@@ -84,7 +88,7 @@ const AdminAgentsPage: React.FC = () => {
   }
 
   return (
-    <div style={pageStyle}>
+    <div style={pageStyle} className="admin-page-container">
       <div style={headerStyle}>
         <h1 style={{ margin: 0 }}>Управление агентами</h1>
         <p style={{ margin: '5px 0 0 0', color: '#C5C6C7' }}>
@@ -95,7 +99,7 @@ const AdminAgentsPage: React.FC = () => {
       {error && <div style={errorStyle}>{error}</div>}
 
       {/* Stats Summary */}
-      <div style={statsRowStyle}>
+      <div style={statsRowStyle} className="admin-stats-grid">
         <div style={statBoxStyle}>
           <div style={statValueStyle}>{agents.length}</div>
           <div style={statLabelStyle}>Всего агентов</div>
@@ -121,7 +125,7 @@ const AdminAgentsPage: React.FC = () => {
       </div>
 
       {/* Agents Grid */}
-      <div style={agentsGridStyle}>
+      <div style={agentsGridStyle} className="admin-list-grid">
         {agents.length === 0 ? (
           <div style={emptyStyle}>Агенты еще не зарегистрированы</div>
         ) : (
@@ -171,6 +175,7 @@ const AdminAgentsPage: React.FC = () => {
                       value={commandType}
                       onChange={e => setCommandType(e.target.value)}
                       style={selectStyle}
+                      className="admin-input"
                     >
                       <option value="pause">Пауза</option>
                       <option value="resume">Продолжить</option>
@@ -183,8 +188,9 @@ const AdminAgentsPage: React.FC = () => {
                       value={commandReason}
                       onChange={e => setCommandReason(e.target.value)}
                       style={inputStyle}
+                      className="admin-input"
                     />
-                    <div style={buttonRowStyle}>
+                    <div style={buttonRowStyle} className="admin-button-row">
                       <button
                         onClick={() => sendCommand(agent.agent_id)}
                         style={sendButtonStyle}
@@ -203,6 +209,7 @@ const AdminAgentsPage: React.FC = () => {
                   <button
                     onClick={() => setCommandAgent(agent.agent_id)}
                     style={commandButtonStyle}
+                    className="admin-button"
                     disabled={agent.status === 'offline'}
                   >
                     Отправить команду
@@ -218,17 +225,17 @@ const AdminAgentsPage: React.FC = () => {
 };
 
 // Styles
-const pageStyle: React.CSSProperties = { padding: '20px' };
+const pageStyle: React.CSSProperties = { padding: '12px' };
 const loadingStyle: React.CSSProperties = { textAlign: 'center', padding: '50px', color: '#C5C6C7' };
-const headerStyle: React.CSSProperties = { marginBottom: '30px', padding: '20px', background: '#1F2833', borderRadius: '8px' };
+const headerStyle: React.CSSProperties = { marginBottom: '24px', padding: '16px', background: '#1F2833', borderRadius: '8px' };
 const errorStyle: React.CSSProperties = { background: '#F44336', color: '#FFFFFF', padding: '15px', borderRadius: '8px', marginBottom: '20px' };
 
-const statsRowStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '30px' };
+const statsRowStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' };
 const statBoxStyle: React.CSSProperties = { background: '#1F2833', padding: '20px', borderRadius: '8px', textAlign: 'center' };
 const statValueStyle: React.CSSProperties = { fontSize: '32px', fontWeight: 'bold', color: '#66FCF1' };
 const statLabelStyle: React.CSSProperties = { color: '#C5C6C7', marginTop: '5px' };
 
-const agentsGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' };
+const agentsGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr', gap: '16px' };
 const emptyStyle: React.CSSProperties = { textAlign: 'center', padding: '40px', color: '#C5C6C7', gridColumn: '1 / -1' };
 
 const agentCardStyle: React.CSSProperties = { background: '#1F2833', borderRadius: '8px', padding: '20px' };
@@ -244,11 +251,50 @@ const infoLabelStyle: React.CSSProperties = { color: '#C5C6C7' };
 const agentActionsStyle: React.CSSProperties = { marginTop: '15px' };
 const commandButtonStyle: React.CSSProperties = { width: '100%', padding: '12px', background: '#45A29E', border: 'none', borderRadius: '6px', color: '#FFFFFF', cursor: 'pointer', fontWeight: 'bold' };
 
-const commandFormStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '10px' };
-const selectStyle: React.CSSProperties = { padding: '10px', background: '#0B0C10', border: '1px solid #45A29E', borderRadius: '6px', color: '#FFFFFF' };
-const inputStyle: React.CSSProperties = { padding: '10px', background: '#0B0C10', border: '1px solid #45A29E', borderRadius: '6px', color: '#FFFFFF' };
+const commandFormStyle: React.CSSProperties = { 
+  display: 'flex', 
+  flexDirection: 'column', 
+  gap: '10px',
+  width: '100%'
+};
+const selectStyle: React.CSSProperties = { 
+  padding: '10px', 
+  background: '#0B0C10', 
+  border: '1px solid #45A29E', 
+  borderRadius: '6px', 
+  color: '#FFFFFF',
+  width: '100%'
+};
+const inputStyle: React.CSSProperties = { 
+  padding: '10px', 
+  background: '#0B0C10', 
+  border: '1px solid #45A29E', 
+  borderRadius: '6px', 
+  color: '#FFFFFF',
+  width: '100%'
+};
 const buttonRowStyle: React.CSSProperties = { display: 'flex', gap: '10px' };
-const sendButtonStyle: React.CSSProperties = { flex: 1, padding: '10px', background: '#4CAF50', border: 'none', borderRadius: '6px', color: '#FFFFFF', cursor: 'pointer', fontWeight: 'bold' };
-const cancelButtonStyle: React.CSSProperties = { flex: 1, padding: '10px', background: '#F44336', border: 'none', borderRadius: '6px', color: '#FFFFFF', cursor: 'pointer', fontWeight: 'bold' };
+const sendButtonStyle: React.CSSProperties = { 
+  flex: 1, 
+  padding: '10px', 
+  background: '#4CAF50', 
+  border: 'none', 
+  borderRadius: '6px', 
+  color: '#FFFFFF', 
+  cursor: 'pointer', 
+  fontWeight: 'bold',
+  minWidth: '100px'
+};
+const cancelButtonStyle: React.CSSProperties = { 
+  flex: 1, 
+  padding: '10px', 
+  background: '#F44336', 
+  border: 'none', 
+  borderRadius: '6px', 
+  color: '#FFFFFF', 
+  cursor: 'pointer', 
+  fontWeight: 'bold',
+  minWidth: '100px'
+};
 
 export default AdminAgentsPage;

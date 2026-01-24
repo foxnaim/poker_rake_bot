@@ -1,4 +1,8 @@
-"""Ручные тесты для Week 3 - для запуска вручную и проверки функциональности"""
+"""Ручные тесты для Week 3 - для запуска вручную и проверки функциональности
+
+Эти тесты требуют запущенного сервера на localhost:8000.
+Для запуска: python tests/test_week3_manual.py
+"""
 
 import pytest
 # Эти тесты используют async def и требуют pytest-asyncio/anyio плагины.
@@ -12,6 +16,9 @@ from datetime import datetime
 
 API_URL = "http://localhost:8000"
 WS_URL = "ws://localhost:8000"
+
+# Skip все тесты в этом файле при обычном запуске pytest
+pytestmark = pytest.mark.skip(reason="Manual tests require running server at localhost:8000")
 
 
 async def test_rake_calculation():
