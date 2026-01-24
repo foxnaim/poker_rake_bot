@@ -38,12 +38,12 @@ const AdminRakeModelsPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [modelsData, roomsData] = await Promise.all([
+      const [modelsRes, roomsRes] = await Promise.all([
         api.get("/api/v1/admin/rake-models"),
         api.get("/api/v1/admin/rooms")
       ]);
-      setModels(modelsData || []);
-      setRooms(roomsData || []);
+      setModels(modelsRes.data || []);
+      setRooms(roomsRes.data || []);
     } catch (error: any) {
       console.error('Error loading data:', error);
       setModels([]);
@@ -56,10 +56,10 @@ const AdminRakeModelsPage: React.FC = () => {
 
   const loadModels = async () => {
     try {
-      const data = roomFilter 
+      const response = roomFilter
         ? await api.get(`/api/v1/admin/rake-models?room_id=${roomFilter}`)
         : await api.get("/api/v1/admin/rake-models");
-      setModels(data || []);
+      setModels(response.data || []);
     } catch (error: any) {
       console.error('Error loading models:', error);
       setModels([]);

@@ -47,12 +47,12 @@ const AdminBotConfigsPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [configsData, botsData] = await Promise.all([
+      const [configsRes, botsRes] = await Promise.all([
         api.get("/api/v1/admin/bot-configs"),
         api.get("/api/v1/admin/bots")
       ]);
-      setConfigs(configsData || []);
-      setBots(botsData || []);
+      setConfigs(configsRes.data || []);
+      setBots(botsRes.data || []);
     } catch (error: any) {
       console.error('Error loading data:', error);
       setConfigs([]);
@@ -65,10 +65,10 @@ const AdminBotConfigsPage: React.FC = () => {
 
   const loadConfigs = async () => {
     try {
-      const data = botFilter 
+      const response = botFilter
         ? await api.get(`/api/v1/admin/bot-configs?bot_id=${botFilter}`)
         : await api.get("/api/v1/admin/bot-configs");
-      setConfigs(data || []);
+      setConfigs(response.data || []);
     } catch (error: any) {
       console.error('Error loading configs:', error);
       setConfigs([]);

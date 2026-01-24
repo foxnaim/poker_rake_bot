@@ -52,12 +52,12 @@ const AdminAuditPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [entriesData, summaryData] = await Promise.all([
+      const [entriesRes, summaryRes] = await Promise.all([
         api.get(`/api/v1/admin/audit?limit=${filters.limit}${(filters.action || undefined ? `&action=${filters.action || undefined}` : "")}${(filters.entity_type || undefined ? `&entity_type=${filters.entity_type || undefined}` : "")}`),
         api.get("/api/v1/admin/audit/summary")
       ]);
-      setEntries(entriesData || []);
-      setSummary(summaryData || null);
+      setEntries(entriesRes.data || []);
+      setSummary(summaryRes.data || null);
     } catch (error: any) {
       console.error('Error loading audit data:', error);
       setEntries([]);

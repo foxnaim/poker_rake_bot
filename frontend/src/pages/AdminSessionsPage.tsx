@@ -34,14 +34,14 @@ const AdminSessionsPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [sessionsData, botsData, tablesData] = await Promise.all([
-        api.get(`/api/v1/admin/sessions/recent?bot_id=${50}`),
+      const [sessionsRes, botsRes, tablesRes] = await Promise.all([
+        api.get("/api/v1/admin/sessions/recent"),
         api.get("/api/v1/admin/bots"),
         api.get("/api/v1/admin/tables")
       ]);
-      setSessions(sessionsData || []);
-      setBots(botsData || []);
-      setTables(tablesData || []);
+      setSessions(sessionsRes.data || []);
+      setBots(botsRes.data || []);
+      setTables(tablesRes.data || []);
     } catch (error: any) {
       console.error('Error loading data:', error);
       setSessions([]);
@@ -55,7 +55,7 @@ const AdminSessionsPage: React.FC = () => {
 
   const loadSessions = async () => {
     try {
-      const response = await api.get(`/api/v1/admin/sessions/recent?bot_id=${botFilter || ''}`);
+      const response = await api.get('/api/v1/admin/sessions/recent');
       setSessions(response.data || []);
     } catch (error: any) {
       console.error('Error loading sessions:', error);
