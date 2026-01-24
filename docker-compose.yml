@@ -51,7 +51,9 @@ services:
         condition: service_healthy
     volumes:
       - ./:/app
-    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+    # В контейнере лучше без --reload: watchfiles может ловить изменения (например, в tests/*)
+    # и уводить сервер в "shutting down", из-за чего HTTP начинает зависать.
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
 
   trainer:
     build:

@@ -20,8 +20,6 @@ import {
 } from 'react-icons/fa';
 import { GiCardPlay, GiPokerHand } from 'react-icons/gi';
 import { 
-  MdTrendingUp, 
-  MdTrendingDown,
   MdCircle
 } from 'react-icons/md';
 import { 
@@ -46,6 +44,14 @@ interface ChartData {
   hands: number;
 }
 
+function getLiveWsUrl(): string | null {
+  if (typeof window === 'undefined' || typeof WebSocket === 'undefined') return null;
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const host = window.location.hostname || 'localhost';
+  // API is exposed on 8000 in docker-compose and local dev.
+  return `${proto}://${host}:8000/ws/live`;
+}
+
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [chartData, setChartData] = useState<ChartData[]>([]);
@@ -58,11 +64,9 @@ const Dashboard: React.FC = () => {
 
     // WebSocket for real-time updates (optional, don't fail if unavailable)
     let ws: WebSocket | null = null;
-    if (typeof WebSocket !== 'undefined') {
+    const wsUrl = getLiveWsUrl();
+    if (wsUrl) {
       try {
-        const wsUrl = process.env.NODE_ENV === 'production'
-          ? `ws://${window.location.host}/ws/live`
-          : 'ws://localhost:8000/ws/live';
         ws = new WebSocket(wsUrl);
         ws.onopen = () => {
           setIsConnected(true);

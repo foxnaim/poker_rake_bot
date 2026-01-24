@@ -4,9 +4,23 @@
 
 import axios from 'axios';
 
+function getDefaultApiBaseUrl(): string {
+  // IMPORTANT:
+  // - This axios instance is used in the browser, not inside Docker network.
+  // - Therefore we should NOT use docker-compose service names like "api".
+  // - Use the current hostname and the exposed API port instead.
+  if (typeof window === 'undefined') return '';
+
+  const envBase = process.env.REACT_APP_API_BASE_URL || process.env.REACT_APP_API_URL;
+  if (envBase) return envBase;
+
+  const host = window.location.hostname || 'localhost';
+  return `${window.location.protocol}//${host}:8000`;
+}
+
 // Create axios instance with default configuration
 const api = axios.create({
-  baseURL: '',
+  baseURL: getDefaultApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },

@@ -152,7 +152,30 @@ class TestSessionStats:
         """Тест создания и завершения сессии со статистикой"""
         unique_suffix = secrets.token_hex(4)
         session_id = f"test_session_{unique_suffix}"
-        # Создаём сессию
+
+        # Создаём BotSession для привязки рук
+        room = Room(room_link=f"stats_room_{unique_suffix}", type="test", status="active")
+        db_session.add(room)
+        db_session.commit()
+
+        table = Table(room_id=room.id, limit_type="NL10", max_players=6)
+        db_session.add(table)
+        db_session.commit()
+
+        bot = Bot(alias=f"stats_bot_{unique_suffix}", default_style="balanced", default_limit="NL10")
+        db_session.add(bot)
+        db_session.commit()
+
+        bot_session = BotSession(
+            session_id=session_id,
+            bot_id=bot.id,
+            table_id=table.id,
+            status="running"
+        )
+        db_session.add(bot_session)
+        db_session.commit()
+
+        # Создаём BotStats для статистики
         create_request = SessionCreate(
             session_id=session_id,
             limit_type="NL10"
@@ -168,6 +191,7 @@ class TestSessionStats:
                 hand_id=f"hand_{unique_suffix}_{i}",
                 table_id="table_1",
                 limit_type="NL10",
+                session_id=session_id,  # Привязка к сессии
                 players_count=6,
                 hero_position=0,
                 hero_cards="AsKh",
@@ -266,10 +290,10 @@ class TestFullCycle:
                 dealer=0,
                 hero_cards="AsKh",
                 board_cards="",
-                stacks={"player_0": 100.0},
-                bets={"player_0": 0.0},
-                total_bets={"player_0": 0.0},
-                active_players=[0],
+                stacks={"player_0": 100.0, "player_1": 100.0},
+                bets={"player_0": 0.0, "player_1": 1.0},
+                total_bets={"player_0": 0.0, "player_1": 1.0},
+                active_players=[0, 1],
                 pot=10.0,
                 current_player=0,
                 last_raise_amount=0.0,
@@ -284,6 +308,7 @@ class TestFullCycle:
                 hand_id=f"cycle_hand_{unique_suffix}_{i}",
                 table_id="table_1",
                 limit_type="NL10",
+                session_id=session_id,  # Привязка к сессии
                 players_count=6,
                 hero_position=0,
                 hero_cards="AsKh",

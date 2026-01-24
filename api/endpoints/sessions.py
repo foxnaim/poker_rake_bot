@@ -4,12 +4,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import Optional, List
-from datetime import datetime, timezone, timezone
+from datetime import datetime, timezone
 
 from api.schemas import SessionCreate, SessionEnd, SessionResponse, SessionStartResponse, SessionEndResponse, SessionListItem
 from data.database import get_db
 
 router = APIRouter(prefix="/api/v1", tags=["sessions"])
+
+
+def ensure_timezone_aware(dt: datetime) -> datetime:
+    """Конвертирует naive datetime в timezone-aware (UTC)"""
+    if dt and dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 def parse_big_blind(limit_type: str) -> float:
@@ -124,10 +131,14 @@ async def end_session(
     # Завершаем сессию
     session.period_end = datetime.now(timezone.utc)
 
+    # Конвертируем datetime в naive для корректного сравнения с SQLite
+    period_start_naive = ensure_timezone_aware(session.period_start).replace(tzinfo=None)
+    period_end_naive = session.period_end.replace(tzinfo=None)
+
     # Вычисляем статистику из рук за период сессии
     hands = db.query(Hand).filter(
-        Hand.created_at >= session.period_start,
-        Hand.created_at <= session.period_end,
+        Hand.created_at >= period_start_naive,
+        Hand.created_at <= period_end_naive,
         Hand.limit_type == session.limit_type
     ).all()
 
@@ -146,7 +157,7 @@ async def end_session(
         session.total_rake = total_rake
 
         # Rake per hour и hands per hour
-        duration_hours = (session.period_end - session.period_start).total_seconds() / 3600
+        duration_hours = (session.period_end - ensure_timezone_aware(session.period_start)).total_seconds() / 3600
         if duration_hours > 0:
             session.rake_per_hour = total_rake / duration_hours
             session.hands_per_hour = session.hands_played / duration_hours
@@ -222,9 +233,11 @@ async def get_session(
     # Если сессия активна, обновляем статистику в реальном времени
     if session.period_end is None:
         period_end = datetime.now(timezone.utc)
+        # Конвертируем period_start в aware для корректного сравнения
+        period_start_aware = ensure_timezone_aware(session.period_start)
         hands = db.query(Hand).filter(
-            Hand.created_at >= session.period_start,
-            Hand.created_at <= period_end,
+            Hand.created_at >= period_start_aware.replace(tzinfo=None),
+            Hand.created_at <= period_end.replace(tzinfo=None),
             Hand.limit_type == session.limit_type
         ).all()
         
@@ -241,8 +254,8 @@ async def get_session(
                 session.rake_100 = (total_rake / session.hands_played) * 100
             
             session.total_rake = total_rake
-            
-            duration_hours = (period_end - session.period_start).total_seconds() / 3600
+
+            duration_hours = (period_end - period_start_aware).total_seconds() / 3600
             if duration_hours > 0:
                 session.rake_per_hour = total_rake / duration_hours
                 session.hands_per_hour = session.hands_played / duration_hours

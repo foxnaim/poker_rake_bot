@@ -99,8 +99,8 @@ class BotStats(Base):
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String(100), nullable=False, index=True)
     limit_type = Column(String(20), nullable=False, index=True)
-    period_start = Column(DateTime, nullable=False)
-    period_end = Column(DateTime, nullable=True)  # null = active session
+    period_start = Column(DateTime(timezone=True), nullable=False)
+    period_end = Column(DateTime(timezone=True), nullable=True)  # null = active session
     hands_played = Column(Integer, default=0)
     vpip = Column(Numeric(5, 2), default=0)
     pfr = Column(Numeric(5, 2), default=0)
